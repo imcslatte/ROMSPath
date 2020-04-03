@@ -169,7 +169,7 @@ $growparam
 
 $end
 
-
+!*** DVM IS CURRENTLY NOT USED AT ALL!!!!!!!!!!!!!!!!!!!!!!!!*****
 !*** DVM. The following are parameters for the Diurnal Vertical Migration (DVM) behavior type ***
 !  Note: These values were calculated for September 1 at the latitude of 37.0 (Chesapeake Bay mouth)
 !  Note: Variables marked with ** were calculated with light_v2BlueCrab.f (not included in ROMSPath yet)
@@ -185,7 +185,7 @@ $dvmparam
 
 $end
 
-
+!*** SETTLEMENT IS CURRENTLY NOT USED AT ALL!!!!!!!!!!!!!!!!!!!!!!!!!!!*****
 
 !*** SETTLEMENT MODULE PARAMETERS ***
 $settleparam
@@ -211,7 +211,7 @@ $end
 
 $romsgrid
 	Ngrid=2              ! Refinement grids only!
-	refine=7             ! grid refinement, Should Ngrid-1 long
+	refine=7             ! grid refinement, Should be Ngrid-1 long
 $end
 
 
@@ -266,7 +266,7 @@ $output
   !NOTE: Full path must already exist.  Model can create files, but not directories.
 
   outpath = './'      ! Location to write output files  !CHANGE
-                             ! Use outpath = './' to write in same folder as the executable
+                             ! Use outpath = './' to write in same folder as the executable	
   NCOutFile = 'SHOWNESTING_NOMIX'     ! Name of the NetCDF output files (do not include .nc)
 
   outpathGiven = .TRUE.      ! If TRUE files are written to the path given in outpath
