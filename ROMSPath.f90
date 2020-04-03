@@ -191,7 +191,7 @@ contains
     use param_mod,    only: numpar,days,dt,idt,seed,parfile,settlementon,   &
                       Behavior,TrackCollisions,SaltTempOn,Ngrid,SaltTempMean,    &
 					  xi_rho,eta_rho,t_b,t_c,t_f,tstep,initsize,WriteBottom,    &
-                      WriteHeaders,WriteModelTiming,ErrorFlag,getParams
+                      WriteHeaders,WriteModelTiming,ErrorFlag,getParams,Behavior
 	use grid_mod,   only: InitGrid,GRIDS
 	use INT_MOD,   only: LL2ij,inside
     integer :: n,istat,ng,i,j,nmask
@@ -286,7 +286,6 @@ contains
      printdt=0                  !print counter
      CALL init_genrand(seed)    !set random number generator Seed Value
 
-    
     ! ! *************************************************************************
     ! ! *                                                                       *
     ! ! *                    Initialize Hydrodynamic data         		        *
@@ -294,6 +293,11 @@ contains
     ! ! *************************************************************************
 
     
+    IF (Behavior.eq.10)
+		write(*,*) "BEHIOR TYPE 10 IS UNAVAIALABLE, STOPING"
+		STOP
+	END
+	
 	call	updateHydro(.TRUE.,1,t_b)
 	call	updateHydro(.FALSE.,2,t_c)
 	call	updateHydro(.FALSE.,3,t_f)
@@ -900,7 +904,7 @@ contains
 	   call CPU_TIME(times(4))
 	   !write(*,*) times(4)-times(3)
 	   
-
+		if 
 		CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),behout)
 		par(n,pAcc)=behout(1)
 		par(n,pVort)=behout(2)
