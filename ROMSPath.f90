@@ -292,11 +292,11 @@ contains
     ! ! *                                                                       *
     ! ! *************************************************************************
 
-    
-    IF (Behavior.eq.10)
-		write(*,*) "BEHIOR TYPE 10 IS UNAVAIALABLE, STOPING"
+    !! THIS IS TEMPORARY 
+    IF (Behavior.eq.10) THEN
+		write(*,*) "BEHAVIOR TYPE 10 IS UNAVAIALABLE, STOPING"
 		STOP
-	END
+    ENDIF
 	
 	call	updateHydro(.TRUE.,1,t_b)
 	call	updateHydro(.FALSE.,2,t_c)
