@@ -904,7 +904,6 @@ contains
 	   call CPU_TIME(times(4))
 	   !write(*,*) times(4)-times(3)
 	   
-		if 
 		CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),behout)
 		par(n,pAcc)=behout(1)
 		par(n,pVort)=behout(2)
