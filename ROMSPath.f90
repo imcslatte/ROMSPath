@@ -341,9 +341,9 @@ contains
 		
 		Ipar(n)=0.0
 		Jpar(n)=0.0
-		
+		IF(WriteBottom)THEN
 		P_HOB(n)=9999.0
-		
+		ENDIF
 		isIn(n)=.False.
       enddo
 
@@ -904,6 +904,7 @@ contains
 	   call CPU_TIME(times(4))
 	   !write(*,*) times(4)-times(3)
 	   
+		 
 		CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),behout)
 		par(n,pAcc)=behout(1)
 		par(n,pVort)=behout(2)
