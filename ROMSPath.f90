@@ -371,7 +371,9 @@ contains
 				! par(n,ppX)=Ipar(n)
 				! par(n,ppY)=Jpar(n)
 				! if ((ingrid).and.(par(n,pGID).eq.dble(Ngrid))) then
-				if (not(isIn(n))) then
+
+	
+				if (.not.(isIn(n))) then
 						
 					if (ingrid) then
 						par(n,pX)=Ipar(n)
