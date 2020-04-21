@@ -200,7 +200,7 @@ contains
 	CHARACTER(len=200) :: filenm
 
     integer :: in_island,inbounds,test
-    double precision:: tdepth,zeta
+    double precision:: tdepth,zeta,dpran
 	
 
 	
@@ -284,7 +284,14 @@ contains
     ! ! THE FOLLOWING VARIABLE INITIALIZATIONS SHOULD NOT BE CHANGED:
      prcount=0                  !print counter; number of external time steps
      printdt=0                  !print counter
-     CALL init_genrand(seed)    !set random number generator Seed Value
+	 
+    !set random random Seed Value (how inception is that)
+	IF (seed .LE. 0) THEN
+	 call random_seed()
+	 CALL RANDOM_NUMBER(dpran)
+	 seed=int(dpran*1.0D5)
+	ENDIF
+    CALL init_genrand(seed)!set random number generator Seed Value
 
     ! ! *************************************************************************
     ! ! *                                                                       *
@@ -1254,7 +1261,7 @@ contains
 			a0,a1,a2,a3,a4,a5,a6,a7,a8,TempOffset,WriteBottom,WriteWaterDepth,Behavior,		&
 			vort_cr,vort_sat,b0pv,b1pv,b0wv,b1w,acc_cr,acc_sat,&
 			b0pa,b1pa,b0wa,va_flag,OpenOceanBoundary,swimfast,Process_VA,	&
-			WriteWaterDepth
+			WriteWaterDepth,seed
 		USE GRID_MOD, ONLY: reftime, time_units
 		USE netcdf
 		IMPLICIT NONE
@@ -1794,7 +1801,9 @@ contains
 			
 			if (VturbOn) THEN
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "Vertical_Turb", 'True')
-				
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "seed", seed)
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "turb_time_step", deltat)
 				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "spline_error_cutoff", serr)
@@ -1807,14 +1816,19 @@ contains
 				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			else
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "Vertical_Turb", 'False')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			ENDIF
 					
 					
 					
 			if (HturbOn) THEN
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "Horiz_Turb", 'True')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "seed", seed)
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			else
 				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "Horiz_Turb", 'False')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			ENDIF
 			
 			 IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
