@@ -287,7 +287,7 @@ $end
 !*** OTHER PARAMETERS *** 
 $other
 
-  seed         = 9           ! Seed value for random number generator (Mersenne Twister)
+  seed         = 0           ! Seed value for random number generator (Mersenne Twister)
   ErrorFlag    = 3           ! What to do if an error is encountered: 0=stop, 1=return particle to previous location,
                              ! 2=kill particle & stop tracking that particle, 3=set particle out of bounds & 
                              ! stop tracking that particle

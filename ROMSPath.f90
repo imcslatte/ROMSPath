@@ -185,7 +185,7 @@ contains
 !    use behavior_mod, only: initBehave,setOut,die
     use boundary_mod, only: bounds,zbounds
     USE INT_MOD,    ONLY: getInterp2D,getInterp3D
-    use random_mod,   only: init_genrand
+    use random_mod,   only: init_genrand,init_random_seed
     use hydro_mod,    only: updatehydro
 
     use param_mod,    only: numpar,days,dt,idt,seed,parfile,settlementon,   &
@@ -214,7 +214,7 @@ contains
 
     CALL getParams()
 	
-	CALL InitGrid(istat)
+	CALL InitGrid()
 	
     CALL writeModelInfo()
 
@@ -286,13 +286,12 @@ contains
      printdt=0                  !print counter
 	 
     !set random random Seed Value (how inception is that)
-	IF (seed .LE. 0) THEN
-	 call random_seed()
-	 CALL RANDOM_NUMBER(dpran)
-	 seed=int(dpran*1.0D5)
+	IF (seed .EQ. 0) THEN
+	 call init_random_seed(seed)
 	ENDIF
-    CALL init_genrand(seed)!set random number generator Seed Value
 
+    CALL init_genrand(seed)!set random number generator Seed Value
+	
     ! ! *************************************************************************
     ! ! *                                                                       *
     ! ! *                    Initialize Hydrodynamic data         		        *
@@ -301,7 +300,7 @@ contains
 
     !! THIS IS TEMPORARY 
     IF (Behavior.eq.10) THEN
-		write(*,*) "BEHAVIOR TYPE 10 IS UNAVAIALABLE, STOPING"
+		write(*,*) "BEHAVIOR TYPE 10 IS UNAVAILABLE, STOPPING"
 		STOP
     ENDIF
 	
@@ -363,7 +362,7 @@ contains
 	write(*,*) '*********'
 	
 	do ng =1,Ngrid
-		! write(*,*) '*********'
+
 		
 		call LL2ij(GRIDS(ng)%lon_rho,GRIDS(ng)%lat_rho,GRIDS(ng)%angle,Plon,Plat,	&
 				numpar,xi_rho(ng),eta_rho(ng),Ipar,Jpar)

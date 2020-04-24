@@ -36,7 +36,7 @@ PUBLIC ::GRIDS
 CONTAINS
 
 
-  SUBROUTINE InitGrid(IOSTAT)
+  SUBROUTINE InitGrid()
 
   
     USE netcdf
@@ -45,14 +45,15 @@ CONTAINS
         prefix,suffix,filenum,numdigits,Ngrid,refine,hc 
     IMPLICIT NONE
 
-    INTEGER, INTENT(OUT), OPTIONAL :: IOSTAT
+!    INTEGER, INTENT(OUT), OPTIONAL :: IOSTAT
 
     INCLUDE 'netcdf.inc'
 
     !NetCDF Variables
     INTEGER :: NCID,STATUS,VID,dimid,dimcount,ng
 
-	CHARACTER(len=200) :: filenm
+	CHARACTER(len=200) :: filenm,header
+	CHARACTER(len=100) :: strtmp
 	
     !Grid File Output Variables
  !   INTEGER :: nR,nU,nV,maxR,maxU,maxV,wetR,wetU,wetV
@@ -61,9 +62,9 @@ CONTAINS
     INTEGER :: i,j,err,ii,jj
 
     err = 0
-
+	header="PROBLEM READING GRID INFORMATION"
     ! *********************** GET GRID INFO ***********************
-
+	
     ! OPEN NETCDF FILE - GET NCID VALUE
 	do ng=1,Ngrid
 	
@@ -94,11 +95,14 @@ CONTAINS
 	
 	
 	
-		write(*,*) filenm
+		
 		STATUS = NF90_OPEN(filenm,NF90_NOWRITE,NCID)
 		if (STATUS .NE. NF90_NOERR) then
-		write(*,*) 'Problem NF90_OPEN'
+		write(*,*) 'Problem with NF90_OPEN:'
+		write(*,*) 'File not found:'
+		write(*,*) filenm
 		err = 10
+		call errorHandler(header,-1)
 		endif
 
     ! GET VALUES FOR xi_rho,xi_u,xi_v,eta_rho,eta_u,eta_v
@@ -108,6 +112,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid xi_rho'
 			err = 20 
+		call errorHandler(header,-1)
 		endif
 		xi_rho(ng) = dimcount
 
@@ -116,6 +121,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid eta_rho'
 			err = 20 
+			call errorHandler(header,-1)
 		endif
 		eta_rho(ng) = dimcount
 
@@ -124,6 +130,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid xi_u'
 			err = 20 
+			call errorHandler(header,-1)
 		endif
 		xi_u(ng) = dimcount
 
@@ -132,6 +139,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid eta_u'
 			err = 20 
+			call errorHandler(header,-1)
 		endif
 		eta_u(ng) = dimcount
 
@@ -139,6 +147,7 @@ CONTAINS
 		STATUS = NF90_INQUIRE_DIMENSION(NCID,dimid,len=dimcount)
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid xi_v'
+			call errorHandler(header,-1)
 			err = 20 
 		endif
 		xi_v(ng) = dimcount
@@ -147,6 +156,7 @@ CONTAINS
 		STATUS = NF90_INQUIRE_DIMENSION(NCID,dimid,len=dimcount)
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid eta_v'
+			call errorHandler(header,-1)
 			err = 20 
 		endif
 		eta_v(ng) = dimcount
@@ -155,6 +165,7 @@ CONTAINS
 		STATUS = NF90_INQUIRE_DIMENSION(NCID,dimid,len=dimcount)
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid s_rho'
+			call errorHandler(header,-1)
 			err = 20 
 		endif
 		s_rho(ng) = dimcount
@@ -163,6 +174,7 @@ CONTAINS
 		STATUS = NF90_INQUIRE_DIMENSION(NCID,dimid,len=dimcount)
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem dimid s_w'
+			call errorHandler(header,-1)
 			err = 20 
 		endif
 		s_w(ng) = dimcount
@@ -175,6 +187,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read Vtransform'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
 		STATUS = NF90_INQ_VARID(NCID,'Vstretching',VID)
@@ -182,6 +195,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read Vstretching'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
 		STATUS = NF90_INQ_VARID(NCID,'theta_s',VID)
@@ -189,6 +203,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read theta_s'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
 		STATUS = NF90_INQ_VARID(NCID,'theta_b',VID)
@@ -196,20 +211,22 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read theta_b'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
-		STATUS = NF90_INQ_VARID(NCID,'Zob',VID)
-		STATUS = NF90_GET_VAR(NCID,VID,zob(ng))
-		if (STATUS .NE. NF90_NOERR) then
-			write(*,*) 'Problem read zob'
-			err = 40 
-		endif
+!		STATUS = NF90_INQ_VARID(NCID,'Zob',VID)
+!		STATUS = NF90_GET_VAR(NCID,VID,zob(ng))
+!		if (STATUS .NE. NF90_NOERR) then
+!			write(*,*) 'Problem read zob'
+!			err = 40 
+!		endif
 
 		STATUS = NF90_INQ_VARID(NCID,'hc',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,hc(ng))
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read hc'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 
     ! ! ALLOCATE VARIABLE ARRAY DIMENSIONS	
@@ -244,6 +261,7 @@ CONTAINS
 		if (STATUS .NE. NF90_NOERR) then
 			write(*,*) 'Problem read mask_rho'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 
       ! u grid mask
@@ -252,6 +270,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read mask_u'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 
       ! v grid mask
@@ -260,6 +279,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read mask_v'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 
 		 ! Longitude
@@ -268,6 +288,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read lon_rho'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
 			 ! Latitude
@@ -276,6 +297,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read lat_rho'
 			err = 40 
+			call errorHandler(header,-1)
 		endif	
 		
 			 ! Latitude
@@ -284,6 +306,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read H'
 			err = 40 
+			call errorHandler(header,-1)
 		endif	
 			 ! PM
 		STATUS = NF90_INQ_VARID(NCID,'pm',VID)
@@ -291,6 +314,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read pm'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 			 ! PN
 		STATUS = NF90_INQ_VARID(NCID,'pn',VID)
@@ -298,6 +322,7 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read pn'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 			 ! Angle
 		STATUS = NF90_INQ_VARID(NCID,'angle',VID)
@@ -305,65 +330,93 @@ CONTAINS
 		if(STATUS .NE. NF90_NOERR) then
 			write(*,*)'Problem read pn'
 			err = 40 
+			call errorHandler(header,-1)
 		endif
 		
 		STATUS = NF90_INQ_VARID(NCID,'s_rho',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%s_rho)
-		if (STATUS .NE. NF90_NOERR) write(*,*) 'Problem read s_rho'
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read s_rho'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+		endif
 
       ! Cs value on rho grid (Cs_r)
 		STATUS = NF90_INQ_VARID(NCID,'Cs_r',VID)
 		
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%cs_r)
-		if (STATUS .NE. NF90_NOERR) write(*,*) 'Problem read CS_r'
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
-
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read CS_r'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+			call errorHandler(header,-1)
+		endif
       ! s-coordinate on w grid (sc_w)
 		STATUS = NF90_INQ_VARID(NCID,'s_w',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%s_w)
-		if (STATUS .NE. NF90_NOERR) write(*,*) 'Problem read s_w'
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
-
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read s_w'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+		endif
       ! Cs value on w grid (Cs_w)
 		STATUS = NF90_INQ_VARID(NCID,'Cs_w',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%cs_w)
-		if (STATUS .NE. NF90_NOERR) write(*,*) 'Problem read cs_w'
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
-
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read cs_w'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+		endif
 		 ! Ocean_time
 		STATUS = NF90_INQ_VARID(NCID,'ocean_time',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,reftime)
-		if (STATUS .NE. NF90_NOERR) write(*,*) 'Problem read Ocean_time'
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read Ocean_time'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+	    endif
 		
 		
 		
-		STATUS = nf90_get_att(NCID, VID,'units', time_units) 
-		if (STATUS .NE. NF90_NOERR) write(*,*) NF90_STRERROR(STATUS)
+		STATUS = nf90_get_att(NCID, VID,'units', strtmp) 
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'NO time units'
+			write(*,*) NF90_STRERROR(STATUS)
+			call errorHandler(header,-1)
+		endif
+		write(*,*) strtmp
+		write(*,*) reftime
 		
-		
-		if(index(time_units,'day') .gt. 0)then
+		if(index(strtmp,'days') .gt. 0)then
 			reftime=reftime*dble(86400.0)
 			write(*,*) 'time units in input file are days'
-		elseif(index(time_units,'hour') .gt. 0)then
+			time_units(1:7)='seconds'
+			time_units(8:100)=strtmp(5:100-3)
+		elseif(index(strtmp,'hours') .gt. 0)then
 			write(*,*) 'time units in input file are hours'
 			reftime=reftime*dble(3600.0)
-		elseif(index(time_units,'minute') .gt. 0)then
+			time_units(1:7)='seconds'
+			time_units(8:100)=strtmp(6:100-2)
+		elseif(index(strtmp,'minutes') .gt. 0)then
 			reftime=reftime*dble(60.0)
 			write(*,*) 'time units in input file are minutes'
-		elseif(index(time_units,'second') .gt. 0)then
+			time_units(1:7)='seconds'
+			time_units(8:100)=strtmp(8:100)
+		elseif(index(strtmp,'seconds') .gt. 0)then
 			write(*,*) 'time units in input file are seconds'
 		else
 			write(*,*) 'Not a recognized time unit'
+			call errorHandler(header,-1)
 		endif
 		STATUS = NF90_CLOSE(NCID)
 		if(STATUS /= NF90_NOERR) then
 		write(*,*)'Problem closing NCID'
 		err = 50
+	    call errorHandler(header,-1)
 		endif
 		
 
+	    write(*,*) time_units
 		
 
   ! ********************** MAKE Xi,eta griod **********************
@@ -409,12 +462,24 @@ CONTAINS
 	
 
     !If IOSTAT is present, set return value to error code
-    IF(PRESENT(IOSTAT)) IOSTAT = err
+    !IF(PRESENT(IOSTAT)) IOSTAT = err
     !  0=No Errors                 30=Error allocating arrays
     ! 10=Error Opening NCgridfile  40=Error getting variables
     ! 20=Error getting dimensions  50=Error Closing NCgridfile
 
   END SUBROUTINE InitGrid
+  
+  SUBROUTINE errorHandler(header, flag)
+    IMPLICIT NONE
+    CHARACTER(LEN=120), INTENT(IN) :: header
+    INTEGER, INTENT(IN) :: flag
+	
+    WRITE(*,"(A120)")header               !print error message in report.txt
+    STOP
+
+   
+  END SUBROUTINE errorHandler
+
   
    DOUBLE PRECISION FUNCTION getSlevel(zeta,depth,ng,i)
 		!This function returns the depth of the current s-level

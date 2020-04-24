@@ -9,39 +9,42 @@
 #                         USER-DEFINED OPTIONS                            =
 #==========================================================================
 
-CPPFLAGS  = -DGROWTH -DWETDRY  -DSTOKES
-#CPPFLAGS  =  -DWETDRY -DSTOKES
-#CPPFLAGS  = -DGROWTH -DWETDRY  
+#CPPFLAGS  = -DGROWTH -DWETDRY  -DSTOKES
+#CPPFLAGS  =  -DWETDRY
 
 #------------------------------------------------
 #    Set compiler and flags
 #------------------------------------------------
 #
 #    Turn one of the following on:
-IFORT:= on
-GFORTRAN := 
+IFORT:= 
+GFORTRAN :=    
 PGI  := 
 
 ifdef IFORT 
   FC = ifort
 #  NETCDF_INCDIR = /home/rjdave/local/include
-#  NETCDF_LIBDIR = /home/rjdave/local/lib
-  FFLAGS = -fp-model strict -mcmodel=medium  -O3 -I$(NETCDF_INCDIR)
-#   FFLAGS = -g -O0 -traceback -check all -check bounds  -I$(NETCDF_INCDIR)
+#  NETCDF_LIBDIR = /home/rjdave/local/lib 
+  CPPFLAGS  += -DIFORT
+  FFLAGS = -fp-model strict -mcmodel=medium  -O3 -fpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
+#   FFLAGS = -g -O0 -traceback -check all -check bounds  -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
 endif
 
 ifdef GFORTRAN
   FC = gfortran
 #  NETCDF_INCDIR = /home/rjdave/local/include
 #  NETCDF_LIBDIR = /home/rjdave/local/lib
-  FFLAGS = -march=k8 -ffast-math -fno-cx-limited-range -O3 -funroll-loops --param max-unroll-times=4 -ffree-line-length-none -I$(NETCDF_INCDIR)
+  CPPFLAGS  += -DGFORTRAN
+  FFLAGS = -march=k8 -ffast-math -fno-cx-limited-range -O3 -funroll-loops --param max-unroll-times=4 -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
+#   FFLAGS = -g -O0   -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
 endif
 
 ifdef PGI
   FC = pgf90
+  CPPFLAGS  += -DPGI
 #  NETCDF_INCDIR = /home/rjdave/local/include
 #  NETCDF_LIBDIR = /home/rjdave/local/lib
-  FFLAGS := -g -I$(NETCDF_INCDIR)
+  FFLAGS := -g -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR) 
 endif
 
 #------------------------------------------------
@@ -65,6 +68,12 @@ OBJS          = parameter_module.o grid_module.o random_module.o   \
 
 ifdef NFCONFIG        
 	NF_CONFIG ?= nf-config
+#	ifdef GFORTRAN
+#		NF_CONFIG ?= /opt/sw/apps/gcc-7.3.0/netcdf/4.6.1/bin/nf-config
+#	endif
+#	ifdef IFORT
+#		NF_CONFIG ?= /opt/sw/apps/intel-18.0.1/netcdf/4.6.1/bin/nf-config
+#	endif
     NETCDF_INCDIR ?= $(shell $(NF_CONFIG) --prefix)/include
     LIBS := $(shell $(NF_CONFIG) --flibs)
 else
@@ -83,16 +92,17 @@ endif
 ROMSPath : $(OBJS)
 
 	@echo "  Compiling ROMSPath.f90 "
-	@$(FC) $(FFLAGS) -o ROMSPath.exe ROMSPath.f90 $(OBJS) $(LIBS) -fpp  $(CPPFLAGS) -save-temps
-#	@\rm *.o *.mod
+	@echo " Using $(FC) "
+	@echo " $(FC) $(FFLAGS) -o ROMSPath.exe ROMSPath.f90 $(OBJS) $(LIBS)  -save-temps "
+	@$(FC) $(FFLAGS) -o ROMSPath.exe ROMSPath.f90 $(OBJS) $(LIBS)  -save-temps
 	@echo "  "
 	@echo "  Compilation Successfully Completed"
 	@echo "  "
 
 %.o: %.f90
 	@echo "  Compiling $<"
-	@$(FC) $(FFLAGS) -fpp  $(CPPFLAGS) -save-temps -c $<
+	@$(FC) $(FFLAGS) -cpp  $(CPPFLAGS) -save-temps -c $<
 
 clean:
-	\rm *.o *.mod *.i90 ROMSPath.exe
+	\rm *.o *.mod *.i90 *.s *.exe
 
