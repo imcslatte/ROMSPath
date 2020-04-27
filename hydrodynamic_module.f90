@@ -579,7 +579,7 @@
 		  
 		   startz(1)=1
 		   startz(2)=1
-		   startr(3)=tstep
+		   startz(3)=tstep
 
 			countz(1)=xi_v(ng)
 			countz(2)=eta_v(ng)
