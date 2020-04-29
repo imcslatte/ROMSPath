@@ -571,7 +571,7 @@ contains
 
   subroutine run_External_Timestep()
     use param_mod, only: dt,idt,WriteModelTiming,tdim,t_b,t_c,t_f,filenum,&
-		numdigits,prefix,suffix,tstep
+		numdigits,prefix,suffix,tstep,multifile
     use hydro_mod, only: updateHydro,HYDRODATA
 	integer :: stepIT,ng
 	
@@ -580,6 +580,10 @@ contains
 	if (tstep.gt.tdim(ng))	then
 		tstep=1
 		filenum=filenum+1.0		
+		if (.NOT.multifile) then
+			write(*,*) 'NOT ENOUGH TIMES STEP TO CONTINUE:'
+			STOP
+		endif
 	endif
     stepIT  = int(dt/idt)                     !number of internal time steps
 

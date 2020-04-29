@@ -261,16 +261,19 @@
 !  Filename = prefix + filenum + suffix
   CHARACTER(LEN=200),Dimension(MAXNgrid) :: prefix      ! NetCDF Input Filename prefix
   CHARACTER(LEN=200) :: suffix      ! NetCDF Input Filename suffix
+  CHARACTER(LEN=100) :: time_vname      ! NetCDF Input Time vairable name (usually ocean_time)
+  CHARACTER(LEN=100) :: time_dname      ! NetCDF Input Time dimension name (usually ocean_time)
   INTEGER :: filenum                ! Number in First NetCDF Input Filename
   INTEGER :: numdigits              ! Number of digits in number portion of file name (with leading zeros)
-  LOGICAL :: startfile              ! .TRUE. means the first file has an additional time step
+!  LOGICAL :: startfile              ! .TRUE. means the first file has an additional time step
+  LOGICAL :: multifile              ! .TRUE. means multiple files are used. .False. means only a single file/url
   !Note: the path to the file is necessary if the file is not in the same folder as the code
   !Note: if .nc file in separate folder in Windows, then include path in prefix. For example:
   !      CHARACTER(LEN=15), PARAMETER :: prefix='D:\ROMS\y95hdr_'   
   !      if .nc file in separate folder in Linux, then include path in prefix. For example:
   !      CHARACTER(LEN=26), PARAMETER :: prefix='/share/lzhong/1995/y95hdr_'   
 
-  namelist/romsoutput/prefix,suffix,filenum,numdigits,startfile
+  namelist/romsoutput/prefix,suffix,filenum,numdigits,multifile,time_vname,time_dname
 
 
 

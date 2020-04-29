@@ -42,7 +42,8 @@ CONTAINS
     USE netcdf
 	USE PARAM_MOD, ONLY: xi_rho,eta_rho,xi_u,eta_u,xi_v,eta_v,    &
 		s_rho,s_w,Vtransform,Vstretching,theta_s,theta_b,tline,zob,	&
-        prefix,suffix,filenum,numdigits,Ngrid,refine,hc 
+        prefix,suffix,filenum,numdigits,Ngrid,refine,hc,time_vname 
+	USE HYDRO_MOD, ONLY: getFileNames
     IMPLICIT NONE
 
 !    INTEGER, INTENT(OUT), OPTIONAL :: IOSTAT
@@ -67,31 +68,38 @@ CONTAINS
 	
     ! OPEN NETCDF FILE - GET NCID VALUE
 	do ng=1,Ngrid
-	
 		if (ng.eq.1) allocate(GRIDS(Ngrid))
-		SELECT CASE(numdigits)
-		CASE(1)
-			WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(2)
-			WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(3)
-			WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(4)
-			WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(5)
-			WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(6)
-			WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(7)
-			WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE(8)
-			WRITE(filenm,'(A,I8.8,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		CASE DEFAULT
-			WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
-			WRITE(*,*) 'Please use numdigit value from 1 to 8'
-			WRITE(*,*) '  OR modify code in Hydrodynamic module'
-			STOP
-		END SELECT
+		
+		call getFileNames(filenm,prefix(ng),filenum)
+		! write(*,*) '-----------'
+		! write(*,*) filenm
+		   
+		! SELECT CASE(numdigits)
+		! CASE(1)
+			! WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(2)
+			! WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(3)
+			! WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(4)
+			! WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(5)
+			! WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(6)
+			! WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(7)
+			! WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE(8)
+			! WRITE(filenm,'(A,I8.8,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		! CASE DEFAULT
+			! WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
+			! WRITE(*,*) 'Please use numdigit value from 1 to 8'
+			! WRITE(*,*) '  OR modify code in Hydrodynamic module'
+			! STOP
+		! END SELECT
+		
+		! write(*,*) filenm
+		! write(*,*) '-----------'
 	
 	
 	
@@ -368,10 +376,11 @@ CONTAINS
 			call errorHandler(header,-1)
 		endif
 		 ! Ocean_time
-		STATUS = NF90_INQ_VARID(NCID,'ocean_time',VID)
+		STATUS = NF90_INQ_VARID(NCID,trim(time_vname),VID)
 		STATUS = NF90_GET_VAR(NCID,VID,reftime)
 		if (STATUS .NE. NF90_NOERR) then
-			write(*,*) 'Problem read Ocean_time'
+			write(*,*) 'Problem reading Time variable:'
+			write(*,*) trim(time_vname)
 			write(*,*) NF90_STRERROR(STATUS)
 			call errorHandler(header,-1)
 	    endif
@@ -384,8 +393,7 @@ CONTAINS
 			write(*,*) NF90_STRERROR(STATUS)
 			call errorHandler(header,-1)
 		endif
-		write(*,*) strtmp
-		write(*,*) reftime
+
 		
 		if(index(strtmp,'days') .gt. 0)then
 			reftime=reftime*dble(86400.0)

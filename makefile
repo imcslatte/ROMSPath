@@ -18,7 +18,7 @@
 #
 #    Turn one of the following on:
 IFORT:= 
-GFORTRAN :=    
+GFORTRAN := on
 PGI  := 
 
 ifdef IFORT 
@@ -61,8 +61,8 @@ NFCONFIG := on
 # End of user-defined options. Nothing should be changed below this point =
 #==========================================================================
 
-OBJS          = parameter_module.o grid_module.o random_module.o   \
-				hydrodynamic_module.o interpolation_module.o boundary_module.o\
+OBJS          = parameter_module.o hydrodynamic_module.o grid_module.o  \
+				random_module.o interpolation_module.o boundary_module.o\
 				pdf_module.o hor_turb_module.o	pppack.o ver_turb_module.o advection_module.o\
 				growth_module.o behavior_module.o
 

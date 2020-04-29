@@ -11,6 +11,8 @@
 
 	  IMPLICIT NONE
 	  PRIVATE
+	  PUBLIC ::getFileNames
+
 	  SAVE
 
 	 
@@ -115,7 +117,7 @@
 			readTemp,constTemp,readDens,constDens,readU,constU,readV,constV,readW, &
 			constW,readAks,constAks,Ngrid,xi_u,eta_u,xi_v,eta_v,tdim,t_b,t_c,t_f,&
 			stokesprefix,TempOffset,WriteBottom,turbstd_v_a_prefix,wavestd_prefix,&
-			Behavior,Process_VA,Process_WA	
+			Behavior,Process_VA,Process_WA,time_vname,time_dname 	
 		USE netcdf
 		IMPLICIT NONE
 
@@ -181,90 +183,111 @@
 				
 			endif
 			
+		 
 		  ! !Open netCDF file
-		  counter=fint(ng)+filenum  
-		  
-		  SELECT CASE(numdigits)
-			CASE(1)
-			  WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
-			  WRITE(turbfilenm,'(A,I1.1,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-			  WRITE(wavefilenm,'(A,I1.1,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+		   counter=fint(ng)+filenum  
+		   call getFileNames(filenm,prefix(ng),counter)
+		   call getFileNames(turbfilenm,turbstd_v_a_prefix(ng),counter)
+		   call getFileNames(wavefilenm,wavestd_prefix(ng),counter)
+#ifdef STOKES
+		   call getFileNames(stokesfilenm,stokesprefix(ng),counter)
+#endif
 
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I1.1,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(2)
-			  WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+		    ! write(*,*) '-----------'
+		    ! write(*,*) tstep
+			if (tstep.eq.1)then
+				write(*,*) "New ROMS File:"
+				write(*,*) filenm
+		    endif
+			
+		   ! write(*,*) turbfilenm
+		   ! write(*,*) wavefilenm
+		  ! SELECT CASE(numdigits)
+			! CASE(1)
+			  ! WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+			  ! WRITE(turbfilenm,'(A,I1.1,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+			  ! WRITE(wavefilenm,'(A,I1.1,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 
-				WRITE(turbfilenm,'(A,I2.2,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I2.2,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I1.1,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(2)
+			  ! WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+
+				! WRITE(turbfilenm,'(A,I2.2,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I2.2,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I2.2,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(3)
-			  WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I2.2,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(3)
+			  ! WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
 			 
-				WRITE(turbfilenm,'(A,I3.3,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I3.3,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I3.3,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I3.3,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I3.3,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(4)
-			  WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I3.3,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(4)
+			  ! WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
 			
-				WRITE(turbfilenm,'(A,I4.4,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I4.4,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I4.4,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I4.4,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I4.4,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(5)
-			  WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I4.4,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(5)
+			  ! WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
 			 
-				WRITE(turbfilenm,'(A,I5.5,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I5.5,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I5.5,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I5.5,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I5.5,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(6)
-			  WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I5.5,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(6)
+			  ! WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
 			
-				WRITE(turbfilenm,'(A,I6.6,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I6.6,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I6.6,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I6.6,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I6.6,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(7)
-			  WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I6.6,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(7)
+			  ! WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),counter,TRIM(suffix)
 			
-				WRITE(turbfilenm,'(A,I7.7,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I7.7,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I7.7,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I7.7,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			 
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I7.7,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE(8)
-			  WRITE(filenm,'(A,I8.8,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I7.7,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE(8)
+			  ! WRITE(filenm,'(A,I8.8,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
 			
-				WRITE(turbfilenm,'(A,I8.8,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
-				WRITE(wavefilenm,'(A,I8.8,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(turbfilenm,'(A,I8.8,A)') TRIM(turbstd_v_a_prefix(ng)),counter,TRIM(suffix)
+				! WRITE(wavefilenm,'(A,I8.8,A)') TRIM(wavestd_prefix(ng)),counter,TRIM(suffix)
 			
-#ifdef STOKES
-			  WRITE(stokesfilenm,'(A,I8.8,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
-#endif
-			CASE DEFAULT
-			  WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
-			  WRITE(*,*) 'Please use numdigit value from 1 to 8'
-			  WRITE(*,*) '  OR modify code in Hydrodynamic module'
-			  STOP
-		  END SELECT
+! #ifdef STOKES
+			  ! WRITE(stokesfilenm,'(A,I8.8,A)') TRIM(stokesprefix(ng)),counter,TRIM(suffix)
+! #endif
+			! CASE DEFAULT
+			  ! WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
+			  ! WRITE(*,*) 'Please use numdigit value from 1 to 8'
+			  ! WRITE(*,*) '  OR modify code in Hydrodynamic module'
+			  ! STOP
+		  ! END SELECT
 		  
 		
 
+		   ! write(*,*) filenm
+		   ! write(*,*) turbfilenm
+		   ! write(*,*) wavefilenm
+		   ! write(*,*) filenm
+		   ! write(*,*) '-----------'
 
 		
 		  ! Read in data for first three external time steps
@@ -276,19 +299,21 @@
 
 
 
-			STATUS = NF90_INQ_DIMID(NCID,'ocean_time',DIMID)
+			STATUS = NF90_INQ_DIMID(NCID,trim(time_dname),DIMID)
 			STATUS = NF90_INQUIRE_DIMENSION(NCID,DIMID,len=dimcount)
 			if (STATUS .NE. NF90_NOERR) then
-			  write(*,*) 'Problem dimid ocean_time'
+			  write(*,*) 'Problem with dimid:'
+			  write(*,*) time_dname
 			  write(*,*) NF90_STRERROR(STATUS)
 			endif
 			tdim(ng) = dimcount
 			
 			startz(1)=tstep
 			countz(1)=1
-		  STATUS = NF90_INQ_VARID(NCID,'ocean_time',VID)
+		  STATUS = NF90_INQ_VARID(NCID,trim(time_vname),VID)
 			if (STATUS .NE. NF90_NOERR) then
-			  write(*,*) 'Problem find time'
+			  write(*,*) 'Problem finding time variable:'
+			  write(*,*) trim(time_vname)
 			  write(*,*) NF90_STRERROR(STATUS)
 			  stop
 			endif
@@ -838,6 +863,42 @@
 
 	  END SUBROUTINE finHydro
 
-
+	   SUBROUTINE getFileNames(filenm,prefix,filenum)
+		!This function returns the depth of the current s-level
+		USE PARAM_MOD, ONLY: numdigits,suffix,multifile
+		IMPLICIT NONE
+		INTEGER, INTENT(IN) :: filenum 
+		CHARACTER(len=200), INTENT(INOUT) :: filenm,prefix
+		
+		if (multifile) then
+		
+			SELECT CASE(numdigits)
+			CASE(1)
+				WRITE(filenm,'(A,I1.1,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(2)
+				WRITE(filenm,'(A,I2.2,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(3)
+				WRITE(filenm,'(A,I3.3,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(4)
+				WRITE(filenm,'(A,I4.4,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(5)
+				WRITE(filenm,'(A,I5.5,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(6)
+				WRITE(filenm,'(A,I6.6,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(7)
+				WRITE(filenm,'(A,I7.7,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE(8)
+				WRITE(filenm,'(A,I8.8,A)') TRIM(prefix),filenum,TRIM(suffix)
+			CASE DEFAULT
+				WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
+				WRITE(*,*) 'Please use numdigit value from 1 to 8'
+				WRITE(*,*) '  OR modify code in Hydrodynamic module'
+				STOP
+			END SELECT
+		else
+			filenm=TRIM(prefix)
+		endif
+	
+	  END SUBROUTINE
 
 	END MODULE HYDRO_MOD

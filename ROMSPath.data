@@ -147,7 +147,7 @@ $end
 !*** Growth MODULE PARAMETERS ***
 $growparam
 
-  Growth=2                   ! Growth type (specify a number)
+  Growth=0                   ! Growth type (specify a number)
                              !   Note: The growth types numbers are:
                              !   0 none, 1 Use deadage, 2 Use Growth equation,
   mortality =.TRUE.          ! TRUE if particles can die; else FALSE
@@ -232,10 +232,12 @@ $romsoutput
         ,'/projects/f_hfuchs_1/data/ROMS/snaildel_nestV04a00/doppio_his_'        !CHANGE
 
   
-  suffix='.nc'               ! NetCDF Input Filename suffix
-  filenum = 0180          ! Number in first NetCDF input filename    !CHANGE
-  numdigits = 4              ! Number of digits in number portion of file name (with leading zeros)
-  startfile = .FALSE.        ! Is it the first file, i.e. does the file have an additional time step?
+  time_vname='time'    ! NetCDF Input Time variable  name (usually ocean_time)
+  time_dname='time'    ! NetCDF Input Time dimension name (usually ocean_time)
+  filenum = 0002          ! Number in first NetCDF input filename   !!*******CHANGE***********
+  numdigits = 4              ! Number of digits in number portion of file name (with leading zeros)!!*******CHANGE***********
+!  startfile = .FALSE.        ! Is it the first file, i.e. does the file have an additional time step?!!*******CHANGE***********
+  multifile = .FALSE.        !.TRUE. means multiple files are used with indexing. .False. means only a single file/url
 $end
 
 
