@@ -43,7 +43,7 @@ CONTAINS
 
    
 	
-    DOUBLE PRECISION :: DEV,r,zetab,zetac,zetaf,zeta,zfit(4),KHfit(4),ast,v(100)
+    DOUBLE PRECISION :: DEV,r,zetab,zetac,zetaf,zeta,zfit(4),KHfit(4),ast
     INTEGER :: i,j,k,jlo,loop,itop,ibot
     DOUBLE PRECISION :: tdepth,slopem,ParZc,Kprimec,KprimeZc,newZc,KH3rdc,Z3rdc, &
                         thisyc,ey(3),Pwc_KHb,Pwc_KHc,Pwc_KHf,zb,zc,zf,m,dz
@@ -53,7 +53,7 @@ CONTAINS
     !TSPACK Variables 
     INTEGER :: IER,SigErr
     DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: dy
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:) :: a,coefsm
+    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:) :: a,coefsm,v
 
     !Number of values to proliferate to
     INTEGER :: np,ng
@@ -66,6 +66,7 @@ CONTAINS
     ALLOCATE(z(s_w(ng)))
     ALLOCATE(dy(np))
     ALLOCATE(a(np,4))
+    ALLOCATE(v(np,7))
     ALLOCATE(coefsm(4,np))
     ALLOCATE(fitz(np))
     ALLOCATE(fitKH(np))
