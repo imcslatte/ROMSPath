@@ -1347,7 +1347,7 @@ contains
 
 		!NF90_DEF_VAR
 
-			STATUS = NF90_DEF_VAR(NCID,'model_time',NF_FLOAT,(/timeID/),modtimeID,&
+			STATUS = NF90_DEF_VAR(NCID,'model_time',NF_DOUBLE,(/timeID/),modtimeID,&
 								  deflate_level=1,shuffle=.true.)
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: time var'
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
@@ -1359,7 +1359,7 @@ contains
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			ENDIF
 
-			STATUS = NF90_DEF_VAR(NCID,'age',NF_FLOAT,(/numparID,timeID/),pageID, &
+			STATUS = NF90_DEF_VAR(NCID,'age',NF_DOUBLE,(/numparID,timeID/),pageID, &
 								  deflate_level=1,shuffle=.true.)
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: age var'
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
