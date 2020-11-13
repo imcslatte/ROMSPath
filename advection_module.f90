@@ -165,6 +165,8 @@ CONTAINS
 	  !*******************************
       ! ! !Check if particle location above or below boundary, If so, place
       ! ! !  just within boundary (1 mm)
+	  
+
       if (Zpar.LT.tdepth) then
         Zpar = tdepth + DBLE(0.001)
         !IF(TrackCollisions) hitBottom(n) = hitBottom(n) + 1

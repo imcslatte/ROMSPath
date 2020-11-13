@@ -1224,9 +1224,17 @@ CONTAINS
 		W(4)=m(4)/dist(4)
 	    WT=W(1)+W(2)+W(3)+W(4)
 		
-		do i=1,4 
-			cff(i)=W(i)/WT
-		enddo
+		
+		if ( WT.EQ.0.0D0) then
+			do i=1,4 
+				cff(i)=0.0D0
+			enddo		
+		else
+			do i=1,4 
+				cff(i)=W(i)/WT
+			enddo
+		endif
+		
 
 		
 

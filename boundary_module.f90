@@ -149,7 +149,8 @@ SUBROUTINE zbounds(ng,Ipar,Jpar,Zpar,ingrid,t)
   use param_mod,    only: xi_rho,eta_rho	
   use INT_MOD,   only:   getInterp2D
   IMPLICIT NONE
-  DOUBLE PRECISION,  INTENT(IN) :: Ipar,Jpar,Zpar
+  DOUBLE PRECISION,  INTENT(IN) :: Ipar,Jpar
+  DOUBLE PRECISION,  INTENT(INOUT) :: Zpar
   INTEGER :: I,J
   INTEGER, INTENT(IN) :: ng ,t
   LOGICAL, INTENT(OUT) :: ingrid
@@ -166,6 +167,12 @@ SUBROUTINE zbounds(ng,Ipar,Jpar,Zpar,ingrid,t)
 		if ((Zpar.LT.tzeta).and.(Zpar.GT.tdepth)) then
 			ingrid=.TRUE.
 		endif
+		
+		if (Zpar.GE.tzeta) then
+		    Zpar=tzeta-0.01D0 !set particle depth to 1 less than 
+			ingrid=.TRUE.
+		endif
+		
 		
 	endif
 	

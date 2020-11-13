@@ -344,6 +344,7 @@ contains
         par(n,pVort) = 0.0
         par(n,pbehaveW) = 0.0
         par(n,pSSF) = 0.0
+        par(n,pWD) = 9999.0
 		
 		Ipar(n)=0.0
 		Jpar(n)=0.0
