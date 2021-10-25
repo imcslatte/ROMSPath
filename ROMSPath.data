@@ -228,6 +228,7 @@ $end
   
   
 $romsoutput
+  suffix='.nc'	 !File suffice required 
   prefix='/projects/f_hfuchs_1/data/ROMS/snaildel_nestV04a00/snaildel_his_'
         ,'/projects/f_hfuchs_1/data/ROMS/snaildel_nestV04a00/doppio_his_'        !CHANGE
 

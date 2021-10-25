@@ -8,7 +8,7 @@ PUBLIC
 SAVE 
 
 
-DOUBLE PRECISION ::  reftime(1)
+DOUBLE PRECISION ::  reftime
 CHARACTER(len=100) :: time_units
 TYPE GRIDDATA
 	DOUBLE PRECISION,pointer :: s_rho(:)
@@ -71,36 +71,6 @@ CONTAINS
 		if (ng.eq.1) allocate(GRIDS(Ngrid))
 		
 		call getFileNames(filenm,prefix(ng),filenum)
-		! write(*,*) '-----------'
-		! write(*,*) filenm
-		   
-		! SELECT CASE(numdigits)
-		! CASE(1)
-			! WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(2)
-			! WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(3)
-			! WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(4)
-			! WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(5)
-			! WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(6)
-			! WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(7)
-			! WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE(8)
-			! WRITE(filenm,'(A,I8.8,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		! CASE DEFAULT
-			! WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
-			! WRITE(*,*) 'Please use numdigit value from 1 to 8'
-			! WRITE(*,*) '  OR modify code in Hydrodynamic module'
-			! STOP
-		! END SELECT
-		
-		! write(*,*) filenm
-		! write(*,*) '-----------'
-	
 	
 	
 		
@@ -222,13 +192,6 @@ CONTAINS
 			call errorHandler(header,-1)
 		endif
 		
-!		STATUS = NF90_INQ_VARID(NCID,'Zob',VID)
-!		STATUS = NF90_GET_VAR(NCID,VID,zob(ng))
-!		if (STATUS .NE. NF90_NOERR) then
-!			write(*,*) 'Problem read zob'
-!			err = 40 
-!		endif
-
 		STATUS = NF90_INQ_VARID(NCID,'hc',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,hc(ng))
 		if (STATUS .NE. NF90_NOERR) then
@@ -357,7 +320,6 @@ CONTAINS
 			write(*,*) 'Problem read CS_r'
 			write(*,*) NF90_STRERROR(STATUS)
 			call errorHandler(header,-1)
-			call errorHandler(header,-1)
 		endif
       ! s-coordinate on w grid (sc_w)
 		STATUS = NF90_INQ_VARID(NCID,'s_w',VID)
@@ -412,6 +374,7 @@ CONTAINS
 			time_units(8:100)=strtmp(8:100)
 		elseif(index(strtmp,'seconds') .gt. 0)then
 			write(*,*) 'time units in input file are seconds'
+			time_units=strtmp
 		else
 			write(*,*) 'Not a recognized time unit'
 			call errorHandler(header,-1)
@@ -425,7 +388,7 @@ CONTAINS
 		
 
 	    write(*,*) time_units
-		
+		write(*,*) reftime
 
   ! ********************** MAKE Xi,eta griod **********************
   

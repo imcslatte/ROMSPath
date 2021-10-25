@@ -1,7 +1,7 @@
-! ROMSPath - Larval TRANSport Lagrangian model v.4                                
-! Date: 5 March 2019
+! ROMSPath - Offlinwe PArticle tracking model v1.1                               
+! Date: 25 OCtober 2021
 !
-! Description: The Lagrangian TRANSport model (ROMSPath) is an 
+! Description: ROMSPath is an 
 ! off-line particle-tracking model that runs with the stored predictions of
 ! a 3D hydrodynamic model, specifically the Regional Ocean Modeling System 
 ! (ROMS). Although ROMSPath was built to simulate oyster larvae, it can  
@@ -21,10 +21,9 @@
 !   Ian Mitchell: imitchell@umces.edu
 !   Elias Hunter: hunter@marine.rutgers.edu
 !
-!   University of Maryland
-!   Center for Envir. Science
-!   Horn Point Laboratory
-!   Cambridge, MD 21613 USA
+!   Rutgers The State University of New Jersey
+!   Department of Marine and Coastal Sciences
+!   New Brunswick, NJ 08901 USA
 !
 ! Funding was provided by the National Science Foundation Biological 
 ! and Physical Oceanography Programs, Maryland Department of Natural 
@@ -33,8 +32,8 @@
 ! 
 ! **********************************************************************
 ! **********************************************************************
-! **                      Copyright (c) 2013                          **
-! **   The University of Maryland Center for Environmental Science    **
+! **                      Copyright (c) 2019                       **
+! **   								    **
 ! **********************************************************************
 ! **                                                                  **
 ! ** This Software is open-source and licensed under the following    **
@@ -67,7 +66,7 @@
 ! ** The most current official versions of this Software and          **
 ! ** associated tools and documentation are available at:             **
 ! **                                                                  **
-! **  http://northweb.hpl.umces.edu/ROMSPath.htm                        **
+! **  	                     **
 ! **                                                                  **
 ! ** We ask that users make appropriate acknowledgement of            **
 ! ** The University of Maryland Center for Environmental Science,     **
@@ -75,7 +74,7 @@
 ! ** and funding agencies. One way to do this is to cite one or       **
 ! ** more of the relevant publications listed at:                     **
 ! **                                                                  **
-! **  http://northweb.hpl.umces.edu/ROMSPath.htm#Description            **
+! ** 	          **
 ! **                                                                  **
 ! **********************************************************************
 ! ********************************************************************** 
@@ -92,7 +91,7 @@ PROGRAM main
 ! Program created by:   Elizabeth North
 ! Modified by:          Elias Hunter
 ! Created on:           2004
-! Last Modified on:     8 August 2019
+! Last Modified on:     25 October 2021
 
 IMPLICIT NONE
 !   *************************************************************************
@@ -101,7 +100,7 @@ IMPLICIT NONE
 !   *                                                                       *
 !   *************************************************************************
 
-  INTEGER, PARAMETER :: nAttrib   = 20
+  INTEGER, PARAMETER :: nAttrib   = 22
 
   INTEGER, PARAMETER :: pX        =  1  ! Particle X-coordinate
   INTEGER, PARAMETER :: pY        =  2  ! Particle Y-coordinate
@@ -123,6 +122,8 @@ IMPLICIT NONE
   INTEGER, PARAMETER :: pbehaveW  = 18  ! MOdeled particle bahavioral velocity
   INTEGER, PARAMETER :: pSSF 	  = 19  ! Modeled Sink/Swim flag
   INTEGER, PARAMETER :: pWD 	  = 20  ! Water Depth
+  INTEGER, PARAMETER :: pZeta 	  = 21  ! ROMS Zeta
+  INTEGER, PARAMETER :: pBath 	  = 22  ! ROMS Bathymetry (h)
 
   DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:) :: par
   DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: P_Salt,P_Temp,mean_salt,mean_temp
@@ -167,6 +168,7 @@ contains
       stepT   = seconds/dt        !number of external time steps
 
       do ets=1,stepT
+	  
 			call run_External_Timestep()
       enddo
 
@@ -287,22 +289,19 @@ contains
 	 
     !set random random Seed Value (how inception is that)
 	IF (seed .EQ. 0) THEN
+
 	 call init_random_seed(seed)
 	ENDIF
 
     CALL init_genrand(seed)!set random number generator Seed Value
-	
+
     ! ! *************************************************************************
     ! ! *                                                                       *
     ! ! *                    Initialize Hydrodynamic data         		        *
     ! ! *                                                                       *
     ! ! *************************************************************************
 
-    !! THIS IS TEMPORARY 
-    IF (Behavior.eq.10) THEN
-		write(*,*) "BEHAVIOR TYPE 10 IS UNAVAILABLE, STOPPING"
-		STOP
-    ENDIF
+    
 	
 	call	updateHydro(.TRUE.,1,t_b)
 	call	updateHydro(.FALSE.,2,t_c)
@@ -332,10 +331,10 @@ contains
         par(n,pnX) = 1.0
         par(n,pnY) = 1.0
         par(n,pnZ) = 1.0
-        par(n,ppX) = 1.0    !initialize to 0.0 to indicate no previous location
-        par(n,ppY) = 1.0    !initialize to 0.0 to indicate no previous location
-        par(n,ppZ) = 1.0    !initialize to 0.0 to indicate no previous location
-        par(n,pStatus)   = 0.0
+        par(n,ppX) = 1.0    
+        par(n,ppY) = 1.0    
+        par(n,ppZ) = 1.0    
+        par(n,pStatus)   = 9.0
         par(n,pAge)      = 0.0
         par(n,pLifespan) = 0.0
         par(n,pGID)      = dble(Ngrid)
@@ -345,6 +344,8 @@ contains
         par(n,pbehaveW) = 0.0
         par(n,pSSF) = 0.0
         par(n,pWD) = 9999.0
+        par(n,pBath) = 9999.0
+        par(n,pZeta) = 9999.0
 		
 		Ipar(n)=0.0
 		Jpar(n)=0.0
@@ -388,11 +389,15 @@ contains
 						par(n,pGID)=dble(ng)
 						par(n,pStatus)=0.0
 						isIn(n)=ingrid	
+						
 						call zbounds(ng,Ipar(n),Jpar(n),par(n,pZ),inzgrid,t_b)
+					
 						if (inzgrid) then
 						else
 							par(n,pStatus)=9.0
 						endif
+					else	
+					
 					endif
 				endif 
 				
@@ -408,6 +413,8 @@ contains
 					 P_salt(n)=getInterp3d("salt",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_c,1,zeta,tdepth)
 					 P_temp(n)=getInterp3d("temp",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_c,1,zeta,tdepth)
 					 par(n,pWD)=(DBLE(-1.0)*tdepth)+zeta
+					 par(n,pZeta)=zeta
+					 par(n,pBath)=(DBLE(-1.0)*tdepth)
 					 if (SaltTempMean) then
 						mean_salt(n)=P_salt(n)
 						mean_temp(n)=P_temp(n)
@@ -419,35 +426,7 @@ contains
 			enddo
 		endif
 	 
-		  ! if (ng.eq.1) then
-			! temp1=GRIDS(ng)%scl(ng+1,1)*Ipar(n)+GRIDS(ng)%off(ng+1,1)
-			! temp2=GRIDS(ng)%scl(ng+1,2)*Jpar(n)+GRIDS(ng)%off(ng+1,2)
-		  ! else
-		  
-			! temp1=GRIDS(ng)%scl(ng-1,1)*Ipar(n)+GRIDS(ng)%off(ng-1,1)
-			! temp2=GRIDS(ng)%scl(ng-1,2)*Jpar(n)+GRIDS(ng)%off(ng-1,2)
-		  ! endif
-		  ! write(10,"(F20.10,F20.10,F20.10,F20.10,F20.10,F20.10)") Plon(n),Plat(n),Ipar(n),Jpar(n),temp1,temp2
-		 ! enddo
-		 ! close(10)
 		 
-		 ! WRITE(filenm,'(A,I3.3)') 'GRID_',ng		
-		
-		 ! OPEN(10,FILE=TRIM(filenm),STATUS='REPLACE')
-		 ! do i=1,xi_rho(ng)
-			 ! do j=1,eta_rho(ng)step
-				! if (ng.eq.1) then
-						! temp1=GRIDS(ng)%scl(ng+1,1)*GRIDS(ng)%xi(i,j)+GRIDS(ng)%off(ng+1,1)
-						! temp2=GRIDS(ng)%scl(ng+1,2)*GRIDS(ng)%eta(i,j)+GRIDS(ng)%off(ng+1,2)
-				! else
-		  
-						! temp1=GRIDS(ng)%scl(ng-1,1)*GRIDS(ng)%xi(i,j)+GRIDS(ng)%off(ng-1,1)
-						! temp2=GRIDS(ng)%scl(ng-1,2)*GRIDS(ng)%eta(i,j)+GRIDS(ng)%off(ng-1,2)
-				! endif
-			 
-				 ! write(10,"(F20.10,F20.10,I4,F20.10,F20.10)") GRIDS(ng)%xi(i,j),GRIDS(ng)%eta(i,j) ,GRIDS(ng)%mask_rho(i,j),temp1,temp2
-			 ! enddo
-	    ! 
 		! close(10)
     enddo
 	
@@ -471,100 +450,12 @@ contains
 
     prcount = 0
 	call writeNetCDF(0,pLon,pLat)
-      ! if (SaltTempOn) then
-        ! if(TrackCollisions)then
-          ! CALL writeNetCDF(0,par(:,pAge),pLon,pLat,par(:,pZ),par(:,pStatus),par(:,pGid),   &
-                          ! SALT=P_Salt,TEMP=P_Temp,HITB=hitBottom,HITL=hitLand)
-        ! else
-          ! CALL writeNetCDF(0,par(:,pAge),pLon,pLat,par(:,pZ),par(:,pStatus),par(:,pGid),   &
-                          ! SALT=P_Salt,TEMP=P_Temp)
-        ! endif
-      ! else
-        ! if(TrackCollisions)then
-          ! CALL writeNetCDF(0,par(:,pAge),pLon,pLat,par(:,pZ),par(:,pStatus),par(:,pGid),   &
-                          ! HITB=hitBottom,HITL=hitLand)
-        ! else
-          ! CALL writeNetCDF(0,par(:,pAge),pLon,pLat,par(:,pZ),par(:,pStatus),par(:,pGid))
-        ! endif
-      ! endif
-
-
-
-
-
-    ! !Initialize Behavior
-    ! CALL initBehave()
-
-    
-
-
-    ! !Create files to output 'land hits' and 'bottom hits'
-    ! IF(TrackCollisions) then
-      ! OPEN(100,FILE='LandHits.csv',STATUS='REPLACE')
-        ! write(100,*)'numpar,lon,lat,depth,age,time,hitLand'
-      ! CLOSE(100)
-      ! OPEN(101,FILE='BottomHits.csv',STATUS='REPLACE')
-        ! write(101,*)'numpar,lon,lat,depth,age,time,hitBottom'
-      ! CLOSE(101)
-    ! ENDIF
-
-  
-    ! !Create file to track model timing
-    ! IF(WriteModelTiming)then
-      ! OPEN(300,FILE='Timing.csv',STATUS='REPLACE')
-        ! write(300,*)'Daytime,Elapsed,Hydro,Hydro %,Set Up,Set Up %,',     &
-        ! 'Advection,Advection %,HTurb,HTurb %,VTurb,VTurb %,Behavior,',    &
-        ! 'Behavior %,Update,Update %'
-      ! CLOSE(300)
-
-    ! ENDIF
-
-   
-
-      ! IF(TrackCollisions)then
-        ! OPEN(100,FILE='LandHits_Headers.txt',STATUS='REPLACE')
-          ! write(100,*)'column 01: numpar  -Particle identification number ',   &
-                      ! '(dimensionless)'
-          ! write(100,*)'column 02: lon     -Longitude of particle at end of ',  &
-                      ! 'time step (decimal °)'
-          ! write(100,*)'column 03: lat     -Latitude  of particle at end of ',  &
-                      ! 'time step (decimal °)'
-          ! write(100,*)'column 04: depth   -Depth of particle at end of time ', &
-                      ! 'step (meters)'
-          ! write(100,*)'column 05: age     -Age of particle (in days since ',   &
-                      ! 'released)'
-          ! write(100,*)'column 06: time    -Model time (in days since the ',    &
-                      ! 'start of the model)'
-          ! write(100,*)'column 07: hitLand -Number of times the particle ',     &
-                      ! 'struck land in the last print interval time step'
-        ! CLOSE(100)
-
-        ! OPEN(101,FILE='BottomHits_Headers.txt',STATUS='REPLACE')
-          ! write(101,*)'column 01: numpar    -Particle identification number ', &
-                      ! '(dimensionless)'
-          ! write(101,*)'column 02: lon       -Longitude of particle at end ',   &
-                      ! 'of time step (decimal °)'
-          ! write(101,*)'column 03: lat       -Latitude  of particle at end ',   &
-                      ! 'of time step (decimal °)'
-          ! write(101,*)'column 04: depth     -Depth of particle at end of ',    &
-                      ! 'time step (meters)'
-          ! write(101,*)'column 05: age       -Age of particle (in days since ', &
-                      ! 'released)'
-          ! write(101,*)'column 06: time      -Model time (in days since the ',  &
-                      ! 'start of the model)'
-          ! write(101,*)'column 07: hitBottom -Number of times the particle ',   &
-                      ! 'struck bottom in the last print interval time step'
-        ! CLOSE(101)
-      ! ENDIF
-    ! ENDIF
+     
 
     ! !Deallocate local variables
      DEALLOCATE(pLon,pLat)
 
-    ! !Output time spent initializing model
-    ! call CPU_TIME(times(1))
-    ! write(*,'("Time to initialize model = ",f6.3," seconds.")') times(1)
-    ! timeCounts = 0.0      !Initialize time counters to 0.0
+ 
 
   end subroutine ini_ROMSPath
 
@@ -574,6 +465,7 @@ contains
     use param_mod, only: dt,idt,WriteModelTiming,tdim,t_b,t_c,t_f,filenum,&
 		numdigits,prefix,suffix,tstep,multifile
     use hydro_mod, only: updateHydro,HYDRODATA
+	USE GRID_MOD, ONLY: reftime
 	integer :: stepIT,ng
 	
 	real :: before,after,tdiff,ibefore,iafter
@@ -588,22 +480,17 @@ contains
 	endif
     stepIT  = int(dt/idt)                     !number of internal time steps
 
-      !IF(WriteModelTiming) call CPU_TIME(before)
-	  
-      ! write(*,*) '---'
-	  ! call CPU_TIME(before)
+ 
+
       !Read in hydrodynamic model data 
+	 
       IF(ets > 2) then			
 	     t_b  = mod(t_b,3)+1  ! 1 -> 2 -> 3 -> 1
 	     t_c  = mod(t_c,3)+1  ! 2 -> 3 -> 1 -> 2
 	     t_f = mod(t_f,3)+1  ! 3 -> 1 -> 2 -> 3
 		CALL updateHydro(.FALSE.,tstep,t_f)   !do not start updating until 3rd iteration
 	  endif
-	  ! call CPU_TIME(after)
-	  ! tdiff=after-before
-	  
-	  ! write(*,*) tdiff
-	  
+
 	  
       !Prepare external time step values to be used for 
       !  calculating Advection and Turbulence
@@ -614,19 +501,13 @@ contains
 	 ! call CPU_TIME(before)
 	 call CPU_TIME(before)
 
-		
        do its=1,stepIT
 		
-		! call CPU_TIME(ibefore)
+
         call run_Internal_Timestep()
-	   ! call CPU_TIME(iafter)  
-		! write(*,*) iafter-ibefore		
        enddo !ITloop
 	  tstep=tstep+1
-	 ! call CPU_TIME(after)  
-	 ! tdiff=after-before
-	 ! write(*,*) 'TIMES'
-	 ! write(*,"(F10.2 ,F10.2 ,F10.2 ,F10.2 ,F10.2 ,F10.2 ,F10.2)") tdiff,timeCounts(1),timeCounts(2),timeCounts(3),timeCounts(4),timeCounts(5),timeCounts(6)
+
 	 timeCounts=0.0
   end subroutine run_External_Timestep
 
@@ -640,11 +521,10 @@ contains
     ix(1) = ex(2) + DBLE((its-2)*idt)
     ix(2) = ex(2) + DBLE((its-1)*idt)
     ix(3) = ex(2) + DBLE(its*idt)
-    
+
     !********************************************************
     !*                    Particle Loop                     *
     !********************************************************
-	
     call update_particles()
     !********************************************************
     !*                 PRINT OUTPUT TO FILE                 *
@@ -754,7 +634,7 @@ contains
     DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: Pwc_zb,Pwc_zc,Pwc_zf
     DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: Pwc_wzb,Pwc_wzc,Pwc_wzf
     DOUBLE PRECISION :: Xpar,Ypar,Zpar,newXpos,newYpos,newZpos,P_zb,P_zc,P_zf, &
-      P_depth,P_zeta,ey(3)
+      P_zeta,ey(3)
     
     ! Behavior and Turbulence
     DOUBLE PRECISION :: TurbHx,TurbHy,TurbV,Behav,XBehav,YBehav,ZBehav
@@ -872,8 +752,6 @@ contains
 			AdvectZ = 0.0
 		END SELECT
 		
-
-		
       ! ! *********************************************************
       ! ! *                                                       *
       ! ! *                  Horizontal Turbulence                *
@@ -962,12 +840,13 @@ contains
 	  ey(3) =  DBLE(1.0)*getInterp2D("zeta",int(par(n,pGID)),tempX,tempY,t_f)
 			  
 	  P_zeta=polintd(ex,ey,3,ix(2))
-				
-				
+
 	 par(n,pWD)=(DBLE(-1.0)*tdepth)+P_zeta
+	 par(n,pZeta)=P_zeta
+	 par(n,pBath)=(DBLE(-1.0)*tdepth)
+	 
 	 hbot=.FALSE.
 	 htop=.FALSE.
-	 
 	 
 	  SELECT CASE (nsb)
 		CASE (0)
@@ -985,7 +864,7 @@ contains
 		CASE (1)  !Near-Surface
 			newZpos = P_zeta-vertdist
 		CASE (2) !Near-Bottom
-			newZpos = P_depth+vertdist
+			newZpos = tdepth+vertdist
 		CASE DEFAULT
 			WRITE(*,*) 'NO VALID BEHAVIOR SET' 
 			EXIT
@@ -1142,7 +1021,7 @@ contains
 		  pLat(n) = getInterp2D("lat",int(par(n,pGID)),par(n,pX),par(n,pY),1)	
 		  
     enddo
-   
+ 
    call writeNetCDF(int(ix(3)),pLon,pLat)
    
    
@@ -1265,7 +1144,7 @@ contains
 			a0,a1,a2,a3,a4,a5,a6,a7,a8,TempOffset,WriteBottom,WriteWaterDepth,Behavior,		&
 			vort_cr,vort_sat,b0pv,b1pv,b0wv,b1w,acc_cr,acc_sat,&
 			b0pa,b1pa,b0wa,va_flag,OpenOceanBoundary,swimfast,Process_VA,	&
-			WriteWaterDepth,seed
+			WriteWaterDepth,seed,WriteZeta,WriteBath
 		USE GRID_MOD, ONLY: reftime, time_units
 		USE netcdf
 		IMPLICIT NONE
@@ -1281,7 +1160,7 @@ contains
 	    character(len=20) :: sdatetime
 		INTEGER :: STATUS,NCID,numparID,timeID,pageID,modtimeID,lonID,latID,ngID,       &
 				   depthID,statusID,hitBID,hitLID,dobID,saltID,tempID,date_time(8),		&
-				   HOBID,bustrID,bvstrID,VORTID,ACCID,BWID,SSFID,WDID
+				   HOBID,bustrID,bvstrID,VORTID,ACCID,BWID,SSFID,WDID,BATHID,ZETAID
 #ifdef GROWTH		
 		INTEGER ::		   sizeID
 #endif
@@ -1375,9 +1254,9 @@ contains
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: lat var'
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
-			STATUS = NF90_DEF_VAR(NCID,'depth',NF_FLOAT,(/numparID,timeID/),      &
+			STATUS = NF90_DEF_VAR(NCID,'zp',NF_FLOAT,(/numparID,timeID/),      &
 								  depthID,deflate_level=1,shuffle=.true.)
-			IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: depth var'
+			IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: zp var'
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
 			STATUS = NF90_DEF_VAR(NCID,'status',NF_FLOAT,(/numparID,timeID/),      &
@@ -1452,6 +1331,26 @@ contains
 
 			ENDIF
 			
+			
+			IF(WriteZeta)THEN
+			  STATUS = NF90_DEF_VAR(NCID,'zeta',NF_FLOAT,(/numparID,timeID/), &
+									ZETAID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Zeta var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			ENDIF
+			
+			IF(WriteBath)THEN
+			  STATUS = NF90_DEF_VAR(NCID,'h',NF_FLOAT,(/numparID,timeID/), &
+									BATHID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'H var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			ENDIF
+			
+			
 			IF((Behavior .eq. 10) .OR. (Process_VA))THEN
 				STATUS = NF90_DEF_VAR(NCID,'vorticity',NF_FLOAT,(/numparID,timeID/), &
 									VORTID,deflate_level=1,shuffle=.true.)
@@ -1499,7 +1398,6 @@ contains
 			STATUS = NF90_PUT_ATT(NCID, modtimeID, "long_name",                    &
 								  "Model time")
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
-
 			STATUS = NF90_PUT_ATT(NCID, modtimeID, "units", trim(time_units))
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
@@ -1554,13 +1452,13 @@ contains
 
 
 			!Depth
-			STATUS = NF90_PUT_ATT(NCID, depthID, "long_name", "depth of particles")
+			STATUS = NF90_PUT_ATT(NCID, depthID, "long_name", "vertical position of the particle in ROMS z-coordinates, zp=0 is mean sea level, positive is up.")
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
-			STATUS = NF90_PUT_ATT(NCID, depthID, "units", "meters below ROMS z=0")
+			STATUS = NF90_PUT_ATT(NCID, depthID, "units", "meters")
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
-			STATUS = NF90_PUT_ATT(NCID, depthID, "field", "depth, scalar, series")
+			STATUS = NF90_PUT_ATT(NCID, depthID, "field", "zp, scalar, series")
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
 
@@ -1681,7 +1579,7 @@ contains
 			  
 			ENDIF
 			IF(WriteWaterDepth)THEN
-			  !HOB
+			
 			  STATUS = NF90_PUT_ATT(NCID, WDID, "long_name",                     &
 									"Local Water Depth at Particle Location")
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
@@ -1691,7 +1589,35 @@ contains
 				
 			  STATUS = NF90_PUT_ATT(NCID, WDID, "units", "m")
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
-			 endif
+			ENDIF
+			
+			IF(WriteZeta)THEN
+			
+			  STATUS = NF90_PUT_ATT(NCID, ZETAID, "long_name",                     &
+									"free surface displacement at particle locations")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,ZETAID, "field", "zeta, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+				
+			  STATUS = NF90_PUT_ATT(NCID, ZETAID, "units", "m")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			ENDIF
+			
+			
+			IF(WriteBath)THEN
+			
+			  STATUS = NF90_PUT_ATT(NCID, BATHID, "long_name",                     &
+									"bathymetry at particle locations")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,BATHID, "field", "H, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+				
+			  STATUS = NF90_PUT_ATT(NCID, BATHID, "units", "m")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			ENDIF
+			
 			
 			
 			IF((Behavior .eq. 10) .OR. (Process_VA))THEN		  
@@ -1943,7 +1869,7 @@ contains
   SUBROUTINE writeNetCDF(time,lon,lat)
 		USE PARAM_MOD, ONLY: numpar,SaltTempOn,NCOutFile,outpath,outpathGiven,     &
 			NCtime,TrackCollisions,Ngrid,SaltTempMean,WriteBottom,WriteWaterDepth,Behavior,		&
-			Process_VA,WriteWaterDepth
+			Process_VA,WriteWaterDepth,WriteZeta,WriteBath
 		USE GRID_MOD, ONLY: reftime
 		USE netcdf
 		IMPLICIT NONE
@@ -1957,7 +1883,8 @@ contains
 
 		CHARACTER(LEN=200) :: ncFile
 		INTEGER :: STATUS,NCID,modtimeID,pageID,lonID,latID,depthID,hitBID,hitLID, &
-				   statusID,saltID,tempID,ngID,n,HOBID,bustrID,bvstrID,BehaveID,WDID
+				   statusID,saltID,tempID,ngID,n,HOBID,bustrID,bvstrID,BehaveID,WDID, &
+				   ZETAID,BATHID
 #ifdef GROWTH		
 		INTEGER ::		   sizeID
 #endif
@@ -2029,7 +1956,7 @@ contains
 		  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
 
 		  !Depth
-		  STATUS = NF90_INQ_VARID(NCID, "depth", depthID)
+		  STATUS = NF90_INQ_VARID(NCID, "zp", depthID)
 		  STATUS = NF90_PUT_VAR(NCID, depthID, par(:,pZ),         &
 								start = (/ 1, prcount /),     &
 								count = (/ numpar,  1 /))
@@ -2157,7 +2084,26 @@ contains
 				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put Water Depth, time: ',time
 				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
 				
-			endif
+		  endif
+		  if (WriteZeta) then
+				STATUS = NF90_INQ_VARID(NCID, "zeta", ZETAID)
+				STATUS = NF90_PUT_VAR(NCID, ZETAID, par(:,pZeta),       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put Zeta, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+				
+		  endif
+		  if (WriteBath) then
+				STATUS = NF90_INQ_VARID(NCID, "h", BATHID)
+				STATUS = NF90_PUT_VAR(NCID, BATHID, par(:,pBath),       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put h, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+				
+		  endif
+			
 #ifdef GROWTH
 			
 			STATUS = NF90_INQ_VARID(NCID, "size", sizeID)
@@ -2213,6 +2159,7 @@ contains
   SUBROUTINE writeModelInfo()
     !This subroutine simply writes model information to standard output
     USE PARAM_MOD
+	USE HYDRO_MOD, ONLY: getFileNames
     IMPLICIT NONE
 
     CHARACTER(len=10) :: tmp !For Converting Integers to Characters
@@ -2302,30 +2249,32 @@ contains
     else
       write(*,*) ' Track Model Timing:    = No'
     endif
+
 	do ng=1,Ngrid
-		SELECT CASE(numdigits)
-		  CASE(1)
-			WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(2)
-			WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(3)
-			WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(4)
-			WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(5)
-			WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(6)
-			WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(7)
-			WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE(8)
-			WRITE(filenm,'(A,I8.8,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
-		  CASE DEFAULT
-			WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
-			WRITE(*,*) 'Please use numdigit value from 1 to 8'
-			WRITE(*,*) '  OR modify code in Hydrodynamic module'
-			STOP
-		END SELECT
+		call getFileNames(filenm,prefix(ng),filenum)
+		! SELECT CASE(numdigits)
+		  ! CASE(1)
+			! WRITE(filenm,'(A,I1.1,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(2)
+			! WRITE(filenm,'(A,I2.2,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(3)
+			! WRITE(filenm,'(A,I3.3,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(4)
+			! WRITE(filenm,'(A,I4.4,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(5)
+			! WRITE(filenm,'(A,I5.5,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(6)
+			! WRITE(filenm,'(A,I6.6,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(7)
+			! WRITE(filenm,'(A,I7.7,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE(8)
+			! WRITE(filenm,'(A,I8.8,A)') TRIM(prefix(ng)),filenum,TRIM(suffix)
+		  ! CASE DEFAULT
+			! WRITE(*,*) 'Model presently does not support numdigits of ',numdigits
+			! WRITE(*,*) 'Please use numdigit value from 1 to 8'
+			! WRITE(*,*) '  OR modify code in Hydrodynamic module'
+			! STOP
+		! END SELECT
 
 		write(*,*) ' '
 		write(*,*) ' First Hydro File:      = ',TRIM(filenm)

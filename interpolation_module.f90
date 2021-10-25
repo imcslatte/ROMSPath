@@ -566,9 +566,7 @@ CONTAINS
 		
 		ALLOCATE(v(4,nz))
 		ALLOCATE(zprof(nz))
-		! write(*,*) '-----'
-		 !write(*,"(I,F10.4,F10.4,F10.4,F10.4,F10.4,F10.4)") ztype,zlev(1),ZPar,zlev(2),zeta,zcff(1),zcff(2)
-		! write(*,*) Itop,Ibot
+		
 		Inode=floor(Ipar)
 		Jnode=floor(Jpar)
 		X=Ipar-Inode
@@ -910,9 +908,13 @@ CONTAINS
 			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
 #endif
 			nwater=m(1)+m(2)+m(3)+m(4)
+		
+		
 			if (nwater.LT.4.0) then
 				call getcoeff(X,Y,m,cff)
 			endif
+			
+			
 			
 			
 		

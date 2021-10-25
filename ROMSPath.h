@@ -77,9 +77,10 @@
   INTEGER          :: iprint        ! Print interval for ROMSPath output (s); 3600 = every hour
   INTEGER          :: dt            ! External time step (duration between hydro model predictions) (s) 
   INTEGER          :: idt           ! Internal (particle tracking) time step (s)
+!  DOUBLE PRECISION :: dstart        ! Start time in data relative to ROMS model initilization 
   
+!  namelist/timeparam/ days,iprint,dt,idt,dstart
   namelist/timeparam/ days,iprint,dt,idt
-
 
 
 !!*** ROMS HYDRODYNAMIC MODULE PARAMETERS ***
@@ -327,6 +328,8 @@
   
   LOGICAL :: WriteBottom            ! Write out bottom stress and height above bottom
   LOGICAL :: WriteWaterDepth        ! Write Total water depth
+  LOGICAL :: WriteZeta              ! Write zeta
+  LOGICAL :: WriteBath              ! Write ROMS bathymetry(H)
   LOGICAL :: TrackCollisions        ! Write Bottom and Land Hit Files? .TRUE.=yes, .FALSE.=no
   LOGICAL :: WriteHeaders           ! Write .txt files with column headers? .TRUE.=yes, .FALSE.=no
   LOGICAL :: WriteModelTiming       ! Write .csv file with model timing data? .TRUE.=yes, .FALSE.=no
@@ -338,4 +341,4 @@
 
   namelist/other/seed,SaltTempOn,TrackCollisions,WriteHeaders,SaltTempMean,WriteBottom, &
                  WriteModelTiming,WriteProblemFile,ijbuff,ErrorFlag,FreeSlip,TempOffset,&
-				 WriteWaterDepth
+				 WriteWaterDepth,WriteZeta,WriteBath
