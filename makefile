@@ -23,8 +23,7 @@ PGI  :=
 
 ifdef IFORT 
   FC = ifort
-#  NETCDF_INCDIR = /home/rjdave/local/include
-#  NETCDF_LIBDIR = /home/rjdave/local/lib 
+
   CPPFLAGS  += -DIFORT
   FFLAGS = -fp-model strict -mcmodel=medium  -O3 -fpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
 #   FFLAGS = -g -O0 -traceback -check all -check bounds  -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
@@ -32,8 +31,7 @@ endif
 
 ifdef GFORTRAN
   FC = gfortran
-#  NETCDF_INCDIR = /home/rjdave/local/include
-#  NETCDF_LIBDIR = /home/rjdave/local/lib
+
   CPPFLAGS  += -DGFORTRAN
   FFLAGS = -march=k8 -ffast-math -fno-cx-limited-range -O3 -funroll-loops --param max-unroll-times=4 -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
 #   FFLAGS = -g -O0   -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)

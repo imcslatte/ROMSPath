@@ -5,7 +5,7 @@ MODULE GROWTH_MOD
 ! Growth algorithms and code created by: Heidi FUchs, implemented by Elias Hunter,
 ! Created on:                              2019
 ! Last Modified on:                        22 March 2019
-!
+! ROMSPath Version: 1.0.1
 
   IMPLICIT NONE
   PRIVATE

@@ -5,6 +5,7 @@
 !NOTE: variables in a namelist can NOT be dynamic variables!!!!! 
 !      dynamic namelists are NOT yet supported in FORTRAN90/95 standard
 !
+! ROMSPath Version: 1.0.1
 
   INTEGER,parameter :: MAXNgrid=5
   DOUBLE PRECISION,parameter :: Eradius = 6371315.0D0

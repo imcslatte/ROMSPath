@@ -2,6 +2,7 @@ MODULE GRID_MOD
  
 ! Grid MOdule
 
+! ROMSPath Version: 1.0.1
  
 IMPLICIT NONE 
 PUBLIC 

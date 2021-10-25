@@ -6,7 +6,7 @@ MODULE BOUNDARY_MOD
 ! The main subroutine in the module, createBounds, determines the number
 ! of boundary points, allocates an array of that size, and fills it with 
 ! the boundary points in order.
-
+! ROMSPath Version: 1.0.1
 
 IMPLICIT NONE
 PRIVATE

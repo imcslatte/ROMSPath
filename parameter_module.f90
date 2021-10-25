@@ -8,6 +8,7 @@ MODULE PARAM_MOD
 !  Created by:            Zachary Schlag 
 !  Created on:            28 Jul 2008 
 !  Last Modified on:         Feb 2013
+! ROMSPath Version: 1.0.1
  
 IMPLICIT NONE 
 PUBLIC 

@@ -3,8 +3,6 @@
 
 !----  This is the file that contains input values for ROMSPath with parameters grouped ---
 !----  (Previously ROMSPath.inc)
-
-
 !*** NUMBER OF PARTICLES ***
 $numparticles
 

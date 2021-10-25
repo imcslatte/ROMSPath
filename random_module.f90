@@ -3,6 +3,7 @@ IMPLICIT NONE
 PUBLIC
 SAVE
 
+! ROMSPath Version: 1.0.1
 ! The following Mersenne Twister program, mt19937ar.f, is used to generate  
 ! random numbers between 0 and 1 from a uniform distribution. The Mersenne
 ! Twister is a fast random number generator with a period of 2^19937-1. 
