@@ -68,7 +68,7 @@ SUBROUTINE bounds(ng,Ipar,Jpar,nmask,ingrid,obound)
 	tX=0.0d0
 	tY=0.0d0
 	
-	if ((I.GT.1).and.(J.GT.1).and.(I.LT.(xi_rho(ng))).and.(J.LT.(eta_rho(ng))))  then
+	if ((I.GT.1).and.(J.GT.1).and.(I.LT.(xi_rho(ng)-1)).and.(J.LT.(eta_rho(ng)-1)))  then
 		m(1,1) = GRIDS(ng)%mask_rho(I,J)
 		m(2,1) = GRIDS(ng)%mask_rho(I+1,J)
 		m(2,2) = GRIDS(ng)%mask_rho(I+1,J+1)
@@ -134,7 +134,7 @@ SUBROUTINE bounds(ng,Ipar,Jpar,nmask,ingrid,obound)
 		
 	else
 	
-		obound=.TRUE.
+		obound=.TRUE.	
 	endif
 	
 
