@@ -52,11 +52,11 @@ CONTAINS
     INCLUDE 'netcdf.inc'
 
     !NetCDF Variables
-    INTEGER :: NCID,STATUS,VID,dimid,dimcount,ng
+    INTEGER :: NCID,STATUS,VID,dimid,dimcount,ng,ng2,nref,dng
 
 	CHARACTER(len=200) :: filenm,header
 	CHARACTER(len=100) :: strtmp
-	
+	DOUBLE PRECISION :: grefine(Ngrid,Ngrid)
     !Grid File Output Variables
  !   INTEGER :: nR,nU,nV,maxR,maxU,maxV,wetR,wetU,wetV
 
@@ -403,36 +403,60 @@ CONTAINS
   
 		GRIDS(ng)%scl=1.0d0
 		GRIDS(ng)%off=0.0d0
+		grefine=1.0d0
 	enddo
-
+	do ng=1,Ngrid
+		do ng2=1,Ngrid
+			dng=abs(ng-ng2)
+			if (dng.GT.0.0) then
+				do nref=1,dng
+					grefine(ng,ng2)=refine(dng)*grefine(ng,ng2)
+				enddo
+			endif
+		enddo
+	enddo
+		
 	!!!!!!!!!!!THIS IS a bit kludgy. 
 	!!!!! setting scales and offsets for coordinate transform. 
-	do ng=1,Ngrid-1
-		loop1:do i=1,xi_rho(ng)
-				do j=1,eta_rho(ng)
-					do ii=1,xi_rho(ng+1)
-						do jj=1,eta_rho(ng+1)
-						if ((GRIDS(ng)%lon_rho(i,j).EQ.GRIDS(ng+1)%lon_rho(ii,jj)).and. &
-						(GRIDS(ng)%lat_rho(i,j).EQ.GRIDS(ng+1)%lat_rho(ii,jj))) then
+	do ng2=1,Ngrid
+		do ng=1,Ngrid
+			loop1:do i=1,xi_rho(ng)
+					do j=1,eta_rho(ng)
+						do ii=1,xi_rho(ng2)
+							do jj=1,eta_rho(ng2)
+							if ((GRIDS(ng)%lon_rho(i,j).EQ.GRIDS(ng2)%lon_rho(ii,jj)).and. &
+							(GRIDS(ng)%lat_rho(i,j).EQ.GRIDS(ng2)%lat_rho(ii,jj))) then
 							
-							exit loop1
-						endif
+								exit loop1
+							endif
+						enddo
 					enddo
 				enddo
-			enddo
-		enddo loop1
-		GRIDS(ng)%scl(ng+1,:)=1.0d0/refine(ng)
-		GRIDS(ng+1)%scl(ng,:)=refine(ng)
+			enddo loop1
+			GRIDS(ng)%scl(ng2,:)=1.0d0/grefine(ng,ng2)
+			GRIDS(ng2)%scl(ng,:)=grefine(ng2,ng)
 		
-		GRIDS(ng)%off(ng+1,1)=dble(ii)-GRIDS(ng)%scl(ng+1,1)*dble(i)
-	    GRIDS(ng)%off(ng+1,2)=dble(jj)-GRIDS(ng)%scl(ng+1,2)*dble(j)
-		GRIDS(ng+1)%off(ng,1)=dble(i)-GRIDS(ng+1)%scl(ng,1)*dble(ii)
-		GRIDS(ng+1)%off(ng,2)=dble(j)-GRIDS(ng+1)%scl(ng,2)*dble(jj)
-
-	enddo 
+			GRIDS(ng)%off(ng2,1)=dble(ii)-GRIDS(ng)%scl(ng2,1)*dble(i)
+			GRIDS(ng)%off(ng2,2)=dble(jj)-GRIDS(ng)%scl(ng2,2)*dble(j)
+			GRIDS(ng2)%off(ng,1)=dble(i)-GRIDS(ng2)%scl(ng,1)*dble(ii)
+			GRIDS(ng2)%off(ng,2)=dble(j)-GRIDS(ng2)%scl(ng,2)*dble(jj)
+		
+		
+		
+		
+		enddo 
+	enddo
 	
-	
-
+	! do ng=1,Ngrid
+		! write(*,*) '1--------------'
+		! do ng2=1,Ngrid
+			! write(*,*) ng,ng2
+			! write(*,*) grefine(ng,ng2)
+			! write(*,*) GRIDS(ng)%off(ng2,1),GRIDS(ng2)%off(ng,2)
+			! write(*,*) GRIDS(ng)%scl(ng2,1),GRIDS(ng2)%scl(ng,2)
+		
+		! enddo
+	! enddo
     !If IOSTAT is present, set return value to error code
     !IF(PRESENT(IOSTAT)) IOSTAT = err
     !  0=No Errors                 30=Error allocating arrays
