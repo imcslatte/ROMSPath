@@ -489,7 +489,7 @@ contains
 	     t_b  = mod(t_b,3)+1  ! 1 -> 2 -> 3 -> 1
 	     t_c  = mod(t_c,3)+1  ! 2 -> 3 -> 1 -> 2
 	     t_f = mod(t_f,3)+1  ! 3 -> 1 -> 2 -> 3
-		CALL updateHydro(.FALSE.,tstep,t_f)   !do not start updating until 3rd iteration
+		CALL updateHydro(.FALSE.,tstep+1,t_f)   !do not start updating until 3rd iteration
 	  endif
 
 	  
