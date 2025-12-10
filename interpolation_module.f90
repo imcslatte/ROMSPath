@@ -114,6 +114,7 @@ CONTAINS
   subroutine LL2ij(longrd,latgrd,angle,inlon,inlat,numpar,	&
 				   xi_rho,eta_rho,Ipar,Jpar)
 	use param_mod, only: Eradius,deg2rad,rad2deg
+	use grid_mod,   	only: GRIDS 
 	integer :: numpar,xi_rho,eta_rho
     double precision,intent(in) :: longrd(1:xi_rho,1:eta_rho),latgrd(1:xi_rho,1:eta_rho),angle(1:xi_rho,1:eta_rho)				
 	double precision,intent(in) :: inlon(1:numpar),inlat(1:numpar)	
@@ -121,7 +122,7 @@ CONTAINS
 	integer :: i,Imin,Imax,Jmin,Jmax,i0,j0,j					
 	logical :: found, foundi, foundj      
 	double precision :: aa2, ang, bb2, diag2, dx, dy, phi
-    double precision :: xfac, xpp, yfac, ypp
+    double precision :: xfac, xpp, yfac, ypp,ymin,xmin,ymax,xmax
 	
 !    OPEN(10,FILE='TESTSTUFF.dat',STATUS='REPLACE')
 	do i=1,numpar
@@ -173,37 +174,58 @@ CONTAINS
 				found=inbox(Imin,Imax, Jmin,Jmax,    &
      &                      longrd, latgrd,  &
      &                      inlon(i), inlat(i))
-	 if (found) then
-			yfac=Eradius*deg2rad
-			xfac=yfac*COS(inlat(i)*deg2rad)
-			xpp=(inlon(i)-longrd(Imin,Jmin))*xfac
-			ypp=(inlat(i)-latgrd(Imin,Jmin))*yfac
+	 
+	 
+	 
+	 SELECT CASE (GRIDS(1)%spherical(1))
+		CASE(0)
+			!write(*,*) 'Cartesian'
+			xmin=longrd(Imin,Jmin)
+			xmax=longrd(Imax,Jmax)
+			ymin=latgrd(Imin,Jmin)
+			ymax=latgrd(Imax,Jmax)
 			
-			diag2=((longrd(Imin+1,Jmin)-longrd(Imin,Jmin+1))*xfac)**2+      &
-		 &            ((latgrd(Imin+1,Jmin)-latgrd(Imin,Jmin+1))*yfac)**2
-				aa2=((longrd(Imin,Jmin)-longrd(Imin+1,Jmin))*xfac)**2+          &
-		 &          ((latgrd(Imin,Jmin)-latgrd(Imin+1,Jmin))*yfac)**2
-				bb2=((longrd(Imin,Jmin)-longrd(Imin,Jmin+1))*xfac)**2+          &
-		 &          ((latgrd(Imin,Jmin)-latgrd(Imin,Jmin+1))*yfac)**2
-				phi=ASIN((diag2-aa2-bb2)/(2.0*SQRT(aa2*bb2)))
-			
-			
-			ang=angle(Imin,Jmin)
-			dx=xpp*COS(ang)+ypp*SIN(ang)
-			dy=ypp*COS(ang)-xpp*SIN(ang)
-	
-			dx=dx+dy*TAN(phi)
-			dy=dy/COS(phi)
-	
-			dx=MIN(MAX(0.0,dx/SQRT(aa2)),1.0)
-			dy=MIN(MAX(0.0,dy/SQRT(bb2)),1.0)
+			xfac=(DBLE(Imax)-DBLE(Imin))/(xmax-xmin)
+			yfac=(DBLE(Jmax)-DBLE(Jmin))/(ymax-ymin)
+			dx=(inlon(i)-xmin)*xfac
+			dy=(inlat(i)-ymin)*yfac
 			Ipar(i)=DBLE(Imin)+dx
 			Jpar(i)=DBLE(Jmin)+dy
-		else 
+		CASE(1)
+			 if (found) then
+					yfac=Eradius*deg2rad
+					xfac=yfac*COS(inlat(i)*deg2rad)
+					xpp=(inlon(i)-longrd(Imin,Jmin))*xfac
+					ypp=(inlat(i)-latgrd(Imin,Jmin))*yfac
+					
+					diag2=((longrd(Imin+1,Jmin)-longrd(Imin,Jmin+1))*xfac)**2+      &
+				 &            ((latgrd(Imin+1,Jmin)-latgrd(Imin,Jmin+1))*yfac)**2
+						aa2=((longrd(Imin,Jmin)-longrd(Imin+1,Jmin))*xfac)**2+          &
+				 &          ((latgrd(Imin,Jmin)-latgrd(Imin+1,Jmin))*yfac)**2
+						bb2=((longrd(Imin,Jmin)-longrd(Imin,Jmin+1))*xfac)**2+          &
+				 &          ((latgrd(Imin,Jmin)-latgrd(Imin,Jmin+1))*yfac)**2
+						phi=ASIN((diag2-aa2-bb2)/(2.0*SQRT(aa2*bb2)))
+					
+					
+					ang=angle(Imin,Jmin)
+					dx=xpp*COS(ang)+ypp*SIN(ang)
+					dy=ypp*COS(ang)-xpp*SIN(ang)
 			
-			Ipar(i)=-1.0
-			Jpar(i)=-1.0
-		endif
+					dx=dx+dy*TAN(phi)
+					dy=dy/COS(phi)
+			
+					dx=MIN(MAX(0.0,dx/SQRT(aa2)),1.0)
+					dy=MIN(MAX(0.0,dy/SQRT(bb2)),1.0)
+					Ipar(i)=DBLE(Imin)+dx
+					Jpar(i)=DBLE(Jmin)+dy
+				else 
+					
+					Ipar(i)=-1.0
+					Jpar(i)=-1.0
+				endif	
+		CASE DEFAULT
+            PRINT *, "NOT SPHERICAL OR CARTESIAN."
+		END SELECT
 	enddo
 !	CLOSE(10)
   end subroutine LL2ij
@@ -412,9 +434,10 @@ CONTAINS
 
 	    Inode=floor(Ipar)
 		Jnode=floor(Jpar)
+
 		X=Ipar-Inode
 		Y=Jpar-Jnode
-		
+
 		m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
 		m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
 		m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
@@ -472,9 +495,9 @@ CONTAINS
 
 		
 		! if(tOK == 1) then 
-		!Ival=cff1*v(1)+cff2*v(2)+cff3*v(3)+cff4*v(4)
-		!		write(*,*) v(1),v(2),v(3),v(4),Ival
-		
+	!	write(*,*) '     '
+!		write(*,*) v(1),v(2),v(3),v(4)
+!		write(*,*) cff(1),cff(2),cff(3),cff(4)
 
 		
 		getInterp2D = cff(1)*v(1)+cff(2)*v(2)+cff(3)*v(3)+cff(4)*v(4)
@@ -1215,7 +1238,10 @@ CONTAINS
 		DOUBLE PRECISION, INTENT(INOUT) :: cff(4)
 		DOUBLE PRECISION :: dist(4),W(4),WT
 		
-		
+		!write(*,*)'W'
+		!write(*,*) m
+		!write(*,*) X
+		!write(*,*) Y
 		cff=0.0
 		dist(1)=sqrt(X**2+Y**2)
 		W(1)=m(1)/dist(1)
@@ -1228,6 +1254,7 @@ CONTAINS
 	    WT=W(1)+W(2)+W(3)+W(4)
 		
 		
+		!write(*,*) W
 		if ( WT.EQ.0.0D0) then
 			do i=1,4 
 				cff(i)=0.0D0

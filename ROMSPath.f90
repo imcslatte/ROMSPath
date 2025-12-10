@@ -236,7 +236,7 @@ contains
   ! ! *                       Allocate Dynamic Variables                        *
   ! ! ***************************************************************************
 
-     ALLOCATE(par(numpar,nAttrib))
+    ALLOCATE(par(numpar,nAttrib))
 
     IF(SettlementOn)THEN
       ALLOCATE(startpoly(numpar))

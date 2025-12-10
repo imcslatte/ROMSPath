@@ -27,7 +27,8 @@ TYPE GRIDDATA
 	DOUBLE PRECISION,pointer :: scl(:,:)
 	DOUBLE PRECISION,pointer :: off(:,:)
 	DOUBLE PRECISION,pointer :: z_rho(:,:,:)
-	DOUBLE PRECISION,pointer :: z_w(:,:,:) 	  	 		
+	DOUBLE PRECISION,pointer :: z_w(:,:,:) 	  	
+	INTEGER,pointer :: spherical(:)	
 	INTEGER,pointer :: mask_rho(:,:)
 	INTEGER,pointer :: mask_u(:,:)
 	INTEGER,pointer :: mask_v(:,:)
@@ -221,13 +222,21 @@ CONTAINS
 		ALLOCATE(GRIDS(ng)%eta(xi_rho(ng),eta_rho(ng)))
 		ALLOCATE(GRIDS(ng)%scl(Ngrid,2))
 		ALLOCATE(GRIDS(ng)%off(Ngrid,2))
+		ALLOCATE(GRIDS(ng)%spherical(1))
         
      
 		
     ! READ IN DATA FROM NETCDF FILE TO VARIABLES
+	! spherical
+		STATUS = NF90_INQ_VARID(NCID,'spherical',VID)
+		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%spherical)
+		if (STATUS .NE. NF90_NOERR) then
+			write(*,*) 'Problem read spherical'
+			err = 40 
+			call errorHandler(header,-1)
+		endif
 	
-	
-      ! rho grid mask
+		
 		STATUS = NF90_INQ_VARID(NCID,'mask_rho',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%mask_rho)
 		if (STATUS .NE. NF90_NOERR) then
@@ -254,25 +263,49 @@ CONTAINS
 			call errorHandler(header,-1)
 		endif
 
+		SELECT CASE (GRIDS(ng)%spherical(1))
+		CASE(0)
+			write(*,*)'Reading Cartesian'
+			 ! X
+			STATUS = NF90_INQ_VARID(NCID,'x_rho',VID)
+			STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lon_rho)
+			if(STATUS .NE. NF90_NOERR) then
+				write(*,*)'Problem read x_rho'
+				err = 40 
+				call errorHandler(header,-1)
+			endif
+			
+				 ! Y
+			STATUS = NF90_INQ_VARID(NCID,'y_rho',VID)
+			STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lat_rho)
+			if(STATUS .NE. NF90_NOERR) then
+				write(*,*)'Problem read y_rho'
+				err = 40 
+				call errorHandler(header,-1)
+			endif	
+		CASE(1)
+			write(*,*)'Reading Geographic'
 		 ! Longitude
-		STATUS = NF90_INQ_VARID(NCID,'lon_rho',VID)
-		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lon_rho)
-		if(STATUS .NE. NF90_NOERR) then
-			write(*,*)'Problem read lon_rho'
-			err = 40 
-			call errorHandler(header,-1)
-		endif
-		
-			 ! Latitude
-		STATUS = NF90_INQ_VARID(NCID,'lat_rho',VID)
-		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lat_rho)
-		if(STATUS .NE. NF90_NOERR) then
-			write(*,*)'Problem read lat_rho'
-			err = 40 
-			call errorHandler(header,-1)
-		endif	
-		
-			 ! Latitude
+			STATUS = NF90_INQ_VARID(NCID,'lon_rho',VID)
+			STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lon_rho)
+			if(STATUS .NE. NF90_NOERR) then
+				write(*,*)'Problem read lon_rho'
+				err = 40 
+				call errorHandler(header,-1)
+			endif
+			
+				 ! Latitude
+			STATUS = NF90_INQ_VARID(NCID,'lat_rho',VID)
+			STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%lat_rho)
+			if(STATUS .NE. NF90_NOERR) then
+				write(*,*)'Problem read lat_rho'
+				err = 40 
+				call errorHandler(header,-1)
+			endif	
+		CASE DEFAULT
+            PRINT *, "NOT SPHERICAL OR CARTESIAN."
+		END SELECT
+			 ! H
 		STATUS = NF90_INQ_VARID(NCID,'h',VID)
 		STATUS = NF90_GET_VAR(NCID,VID,GRIDS(ng)%H)
 		if(STATUS .NE. NF90_NOERR) then
@@ -388,8 +421,8 @@ CONTAINS
 		endif
 		
 
-	    write(*,*) time_units
-		write(*,*) reftime
+	!    write(*,*) time_units
+!		write(*,*) reftime
 
   ! ********************** MAKE Xi,eta griod **********************
   
