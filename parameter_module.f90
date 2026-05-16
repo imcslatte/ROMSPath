@@ -63,6 +63,10 @@ CONTAINS
         IF(istat/=0)err = 50
       ENDIF
       IF(err == 0) THEN
+        READ(1,nml=boundparam   ,IOSTAT=istat)  !--- boundary info
+        IF(istat/=0)err = 52
+      ENDIF
+      IF(err == 0) THEN
         READ(1,nml=fuchsparam   ,IOSTAT=istat)  !--- FUCHS  info
         IF(istat/=0)err = 55
       ENDIF
@@ -77,6 +81,10 @@ CONTAINS
       IF(err == 0) THEN
         READ(1,nml=settleparam  ,IOSTAT=istat)  !--- settlement info
         IF(istat/=0)err = 70
+      ENDIF
+      IF(err == 0) THEN
+        READ(1,nml=bfparam  ,IOSTAT=istat)  !--- biofoul module info
+        IF(istat/=0)err = 80
       ENDIF
       IF(err == 0) THEN
         READ(1,nml=romsgrid     ,IOSTAT=istat)  !--- roms grid
@@ -128,6 +136,8 @@ CONTAINS
         header='Error when reading growthparam, pls check ROMSPath.data'
       CASE(70)
         header='Error when reading settleparam, pls check ROMSPath.data'
+      CASE(80)
+        header='Error when reading bfparam, pls check ROMSPath.data'
       CASE(90)
         header='Error when reading romsgrid, pls check ROMSPath.data'
       CASE(100)

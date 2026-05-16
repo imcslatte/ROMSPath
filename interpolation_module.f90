@@ -110,6 +110,41 @@ CONTAINS
   
   
   
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+! ~~                                                               ~~
+! ~~                     FUNCTION sinintd                           ~~
+! ~~                                                               ~~
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  DOUBLE PRECISION FUNCTION sinintd(ng,xa,A,x,tc)
+        ! interpolates on a sine curve over the course of a day
+    use hydro_mod, only: HYDRODATA
+    IMPLICIT NONE
+    !CHARACTER(LEN=*), INTENT(IN) :: var
+    INTEGER, INTENT(IN) :: ng,tc
+    DOUBLE PRECISION, INTENT(IN) :: xa,A,x ! xa - time at noon, A - light at noon, x - time of inquiry
+
+    DOUBLE PRECISION :: daylength_val,t_dawn,t_pastdawn,PI,arg
+
+    daylength_val = HYDRODATA(ng)%daylength(tc)
+    daylength_val = daylength_val*60.D0*60.D0       !convert units
+    
+    t_dawn = xa - daylength_val/2.D0
+    t_pastdawn = x - t_dawn
+    PI = 4.D0*DATAN(1.D0)
+    
+    arg = (t_pastdawn - daylength_val/4.D0) * (2.D0*PI) * (1.D0/daylength_val)
+    
+      
+  if ((t_pastdawn > 0) .and. (t_pastdawn < daylength_val)) then
+          sinintd = (A/2.D0)*SIN(arg)+(A/2.D0)
+  else
+          sinintd = 0.D0
+  end if
+
+  END FUNCTION sinintd
   
   subroutine LL2ij(longrd,latgrd,angle,inlon,inlat,numpar,	&
 				   xi_rho,eta_rho,Ipar,Jpar)
@@ -938,10 +973,154 @@ CONTAINS
 				call getcoeff(X,Y,m,cff)
 			endif
 			
-			
-			
-			
-		
+
+		  CASE("light")  ! LKCS 
+			v(1,:) = HYDRODATA(ng)%light(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%light(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%light(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%light(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+
+		  CASE("phytoplankton")  ! LKCS 
+			v(1,:) = HYDRODATA(ng)%phytoplankton(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%phytoplankton(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%phytoplankton(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%phytoplankton(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+		  
+		  CASE("zooplankton")  ! LKCS 
+			v(1,:) = HYDRODATA(ng)%zooplankton(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%zooplankton(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%zooplankton(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%zooplankton(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+
+                 CASE("PP")  ! LKCS - primary productivity
+			v(1,:) = HYDRODATA(ng)%PP(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%PP(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%PP(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%PP(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+                        
+                CASE("rho")  ! LKCS - density anomaly
+			v(1,:) = HYDRODATA(ng)%rho(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%rho(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%rho(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%rho(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+
+                CASE("NH4")  ! LKCS - ammonium
+			v(1,:) = HYDRODATA(ng)%NH4(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%NH4(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%NH4(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%NH4(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+
+                CASE("NO3")  ! LKCS - nitrate
+			v(1,:) = HYDRODATA(ng)%NO3(Inode,Jnode,:,t)
+			v(2,:) = HYDRODATA(ng)%NO3(Inode+1,Jnode,:,t)
+			v(3,:) = HYDRODATA(ng)%NO3(Inode+1,Jnode+1,:,t)
+			v(4,:) = HYDRODATA(ng)%NO3(Inode,Jnode+1,:,t)
+#ifdef WETDRY	
+			m(1) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode,t)
+			m(2) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode,t)
+			m(3) = HYDRODATA(ng)%wetdry_mask_rho(Inode+1,Jnode+1,t)
+			m(4) = HYDRODATA(ng)%wetdry_mask_rho(Inode,Jnode+1,t)	
+#else			
+			m(1) = GRIDS(ng)%mask_rho(Inode,Jnode)
+			m(2) = GRIDS(ng)%mask_rho(Inode+1,Jnode)
+			m(3) = GRIDS(ng)%mask_rho(Inode+1,Jnode+1)
+			m(4) = GRIDS(ng)%mask_rho(Inode,Jnode+1)
+#endif
+			nwater=m(1)+m(2)+m(3)+m(4)
+			if (nwater.LT.4.0) then
+				call getcoeff(X,Y,m,cff)
+                        endif
+
 		  CASE DEFAULT
 			write(*,*) 'Problem interpolating ',var
 			write(*,*) ' '
@@ -949,12 +1128,44 @@ CONTAINS
 			stop
 		END SELECT
 
+                do i=1,4   !prevent issues from NaN values where mask exists
+                        if (m(i) < EPSILON(m(i))) then
+                                v(i,:) = 0.0
+                        end if
+                enddo
 
 		do i=1,nz
 		  zprof(i)= cff(1)*v(1,i)+cff(2)*v(2,i)+cff(3)*v(3,i)+cff(4)*v(4,i)
 		enddo
-		getInterp3D=(zcff(1)*zprof(Ibot)+zcff(2)*zprof(Itop))
-
+                if (index(var,"top") >0) then   !LKCS, to support finding top and bottom values of grid cell
+                        if (Itop.eq.Ibot) then
+                                if (Itop < nz) then
+                                        Itop = Itop+1
+                                else if (Ibot > nz) then
+                                        Ibot = Ibot-1
+                                end if
+                        end if
+                        if (index(var,"z") > 0) then
+                            getInterp3D = getSlevel(zeta,depth,ng,Itop) 
+                        else    
+		            getInterp3D=zprof(Itop)
+                        end if
+                else if (index(var,"bot") > 0) then
+                        if (Itop.eq.Ibot) then
+                                if (Itop < nz) then
+                                        Itop = Itop+1
+                                else if (Ibot > nz) then
+                                        Ibot = Ibot-1
+                                end if
+                        end if
+                        if (index(var,"z") > 0) then
+                            getInterp3D = getSlevel(zeta,depth,ng,Ibot)
+                        else    
+		            getInterp3D=zprof(Itop)
+                        end if
+                else
+		        getInterp3D=(zcff(1)*zprof(Ibot)+zcff(2)*zprof(Itop)) !this line was the only thing here before (no if statement)
+                end if
 		
 		DEALLOCATE(v)
 		DEALLOCATE(zprof)

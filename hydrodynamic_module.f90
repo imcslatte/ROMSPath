@@ -66,6 +66,15 @@
 		DOUBLE PRECISION,pointer :: Accelustd_w(:,:,:,:)
 		DOUBLE PRECISION,pointer :: Accelvstd_w(:,:,:,:)
 		DOUBLE PRECISION,pointer :: Accelwstd_w(:,:,:,:)
+        DOUBLE PRECISION,pointer :: light(:,:,:,:)     
+        DOUBLE PRECISION,pointer :: daylength(:)     
+        DOUBLE PRECISION,pointer :: phytoplankton(:,:,:,:)     
+        DOUBLE PRECISION,pointer :: zooplankton(:,:,:,:)    
+        DOUBLE PRECISION,pointer :: PP(:,:,:,:)     
+        DOUBLE PRECISION,pointer :: rho(:,:,:,:)     
+        DOUBLE PRECISION,pointer :: NH4(:,:,:,:)    
+        DOUBLE PRECISION,pointer :: NO3(:,:,:,:)     
+                               
 #ifdef STOKES
 		DOUBLE PRECISION,pointer :: SU(:,:,:,:)
 		DOUBLE PRECISION,pointer :: SV(:,:,:,:)
@@ -114,10 +123,11 @@
 		!  iteration
 		USE PARAM_MOD, ONLY: numpar,xi_rho,eta_rho,s_rho,s_w,suffix,&
 			prefix,filenum,numdigits,readZeta,constZeta,readSalt,constSalt, &
-			readTemp,constTemp,readDens,constDens,readU,constU,readV,constV,readW, &
+			readTemp,constTemp,readLight,readDaylength,readPhytoplankton,readZooplankton,readPP,readRho,readNH4,readNO3, &
+                        readDens,constDens,readU,constU,readV,constV,readW, &
 			constW,readAks,constAks,Ngrid,xi_u,eta_u,xi_v,eta_v,tdim,t_b,t_c,t_f,&
 			stokesprefix,TempOffset,WriteBottom,turbstd_v_a_prefix,wavestd_prefix,&
-			Behavior,Process_VA,Process_WA,time_vname,time_dname 	
+			Behavior,Process_VA,Process_WA,time_vname,time_dname	
 		USE netcdf
 		IMPLICIT NONE
 
@@ -151,6 +161,14 @@
 					ALLOCATE(HYDRODATA(ng)%Accelustd_w(xi_rho(ng),eta_rho(ng),s_w(ng),3))
 					ALLOCATE(HYDRODATA(ng)%Accelvstd_w(xi_rho(ng),eta_rho(ng),s_w(ng),3))
 					ALLOCATE(HYDRODATA(ng)%Accelwstd_w(xi_rho(ng),eta_rho(ng),s_w(ng),3))
+                    ALLOCATE(HYDRODATA(ng)%light(xi_rho(ng),eta_rho(ng),s_rho(ng),3))     
+                    ALLOCATE(HYDRODATA(ng)%daylength(3))      
+                    ALLOCATE(HYDRODATA(ng)%phytoplankton(xi_rho(ng),eta_rho(ng),s_rho(ng),3))      
+                    ALLOCATE(HYDRODATA(ng)%zooplankton(xi_rho(ng),eta_rho(ng),s_rho(ng),3))   
+                    ALLOCATE(HYDRODATA(ng)%PP(xi_rho(ng),eta_rho(ng),s_rho(ng),3))      
+                    ALLOCATE(HYDRODATA(ng)%rho(xi_rho(ng),eta_rho(ng),s_rho(ng),3))      
+                    ALLOCATE(HYDRODATA(ng)%NH4(xi_rho(ng),eta_rho(ng),s_rho(ng),3))      
+                    ALLOCATE(HYDRODATA(ng)%NO3(xi_rho(ng),eta_rho(ng),s_rho(ng),3))      
 #ifdef STOKES
 					ALLOCATE(HYDRODATA(ng)%SU(xi_u(ng),eta_u(ng),s_rho(ng),3))
 					ALLOCATE(HYDRODATA(ng)%SV(xi_v(ng),eta_v(ng),s_rho(ng),3))
@@ -175,6 +193,14 @@
 					HYDRODATA(ng)%Accelustd_w 	= 0
 					HYDRODATA(ng)%Accelvstd_w 	= 0
 					HYDRODATA(ng)%Accelwstd_w 	= 0
+                    HYDRODATA(ng)%light = 0         
+                    HYDRODATA(ng)%phytoplankton = 0 
+                    HYDRODATA(ng)%zooplankton = 0 
+                    HYDRODATA(ng)%daylength = 0     
+                    HYDRODATA(ng)%PP = 0         
+                    HYDRODATA(ng)%rho = 0         
+                    HYDRODATA(ng)%NH4 = 0        
+                    HYDRODATA(ng)%NO3 = 0        
 			
 					
 				
@@ -319,10 +345,210 @@
 		  else
 			HYDRODATA(ng)%temp = constTemp
 		  endif
-		
-		
-		 
+
+                if(readLight)then      
+                        ! **** Light ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'light',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find light'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%light(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read light array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+                
+                if(readDaylength)then      
+                        ! **** Daylength ****
+                        startr(1)=tstep
+
+                        STATUS = NF90_INQ_VARID(NCID,'daylength',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find daylength'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%daylength(tind),STARTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read daylength array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+                
+                if(readPhytoplankton)then      
+                        ! **** Phytoplankton ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'phytoplankton',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find phytoplankton'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%phytoplankton(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read phytoplankton array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+
+                if(readZooplankton)then    
+                        ! **** Zooplankton ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'zooplankton',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find zooplankton'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%zooplankton(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read zooplankton array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+                
+                
+                if(readPP)then      
+                        ! **** PP ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'PP',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find PP'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%PP(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read primary prod. array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+                
+                if(readRho)then      
+                        ! **** Rho ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'rho',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find rho'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%rho(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read density anomaly array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
 		  
+                if(readNH4)then      
+                        ! **** NH4 ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'NH4',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find NH4'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%NH4(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read NH4 array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+
+
+                if(readNO3)then      
+                        ! **** NO3 ****
+                        startr(1)=1
+                        startr(2)=1
+                        startr(3)=1
+                        startr(4)=tstep
+
+                        countr(1)=xi_rho(ng)
+                        countr(2)=eta_rho(ng)
+                        countr(3)=s_rho(ng)
+                        countr(4)=1
+                        STATUS = NF90_INQ_VARID(NCID,'NO3',VID)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem find NO3'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+
+                        STATUS = NF90_GET_VAR(NCID,VID,HYDRODATA(ng)%NO3(:,:,:,tind),STARTr,COUNTr)
+                        if (STATUS .NE. NF90_NOERR) then
+                           write(*,*) 'Problem read NO3 anomaly array'
+                           write(*,*) NF90_STRERROR(STATUS)
+                           stop
+                        endif
+                endif
+
 		  ! call CPU_TIME(before)
 		  if(readU)then  
 			! **** U velocity ****

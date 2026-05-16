@@ -16,7 +16,7 @@
   DOUBLE PRECISION, parameter :: rhof =1.026D0 ! (g cm^-3) Density
   DOUBLE PRECISION, parameter :: nu =0.01D0 !  (cm^2 s^-1) kinematic viscosity of seawater
   DOUBLE PRECISION, parameter :: mu =0.010260D0 ! (g cm^-1 s^-1) dynamic viscosity of seawater(nu*rhof)
-  DOUBLE PRECISION, parameter :: rhop =1.06D0 ! (g cm^-3) Density of larva
+  DOUBLE PRECISION, parameter :: rhop =2000.0D0 ! (g cm^-3) Density of larva !Note this doesn't get used with biofouling
   
   
 !--these are the grid dimension/paramters read from the history/averages files. 
@@ -91,6 +91,14 @@
   DOUBLE PRECISION :: constSalt     ! Constant value for Salt if readSalt is .FALSE.
   LOGICAL          :: readTemp      ! If .TRUE. read in temperature          (temp) from NetCDF file, else use constTemp
   DOUBLE PRECISION :: constTemp     ! Constant value for Temp if readTemp is .FALSE.
+  LOGICAL	   :: readLight	          ! If .TRUE. read in light
+  LOGICAL 	   :: readDaylength     ! If .TRUE. read in Daylength  
+  LOGICAL	   :: readPhytoplankton	  ! If .TRUE. read in Phytoplankton
+  LOGICAL	   :: readZooplankton	    ! If .TRUE. read in Zooplankton
+  LOGICAL	   :: readPP	            ! If .TRUE. read in PP (primary productivity)
+  LOGICAL	   :: readRho	            ! If .TRUE. read in water density (rho)
+  LOGICAL	   :: readNH4	            ! If .TRUE. read in NH4
+  LOGICAL	   :: readNO3	            ! If .TRUE. read in NO3
   LOGICAL          :: readU         ! If .TRUE. read in u-momentum component (U   ) from NetCDF file, else use constU
   DOUBLE PRECISION :: constU        ! Constant value for U if readU is .FALSE.
   LOGICAL          :: readV         ! If .TRUE. read in v-momentum component (V   ) from NetCDF file, else use constV
@@ -109,8 +117,8 @@
   LOGICAL :: Process_WA           ! PROCESS Wave Accel and write to netcdf file.
 !
   namelist/hydroparam/readZeta,constZeta,readSalt,   &
-                    & constSalt,readTemp,constTemp,readU,readU,constU,readV,     &
-                    & constV,readW,constW,readAks,constAks,readDens,constDens,   &
+                    & constSalt,readTemp,constTemp,readLight,readPhytoplankton,readZooplankton,readDaylength,readPP,readRho,readNH4,readNO3,     &
+                    &  readU,readU,constU,readV,constV,readW,constW,readAks,constAks,readDens,constDens,   &
 					& stokesprefix,turbstd_v_a_prefix,wavestd_prefix,Process_VA,Process_WA
 
 
@@ -141,6 +149,7 @@
   LOGICAL :: OpenOceanBoundary      ! Note: If you want to allow particles to "escape" via open ocean 
                                     !   boundaries, set this to TRUE; Escape means that the particle 
                                     !   will stick to the boundary and stop moving
+  LOGICAL :: NoBounce		            ! Set to true if you want particles to stop after settling or beaching
   DOUBLE PRECISION :: pediage       ! Age when particle reaches max swim speed and can settle (s)
                                     !   Note: for oyster larvae behavior (types 4 & 5):
                                     !     pediage = age at which a particle becomes a pediveliger
@@ -160,10 +169,17 @@
                                     ! in meters above bottom (this should be a positive value)
 
 
-  namelist/behavparam/Behavior,OpenOceanBoundary,pediage,swimstart,swimslow,swimfast,Sgradient,sink,Hswimspeed,Swimdepth
+  namelist/behavparam/Behavior,OpenOceanBoundary,NoBounce,pediage,swimstart,swimslow,swimfast,Sgradient,sink,Hswimspeed,Swimdepth
   
-  
-  
+!** BOUNDARY MODULE PARAMETERS ***
+
+  LOGICAL :: YesProbBeach	    ! Set to true if you want particles to beach based on probability model
+  DOUBLE PRECISION :: beachDistWindow
+  INTEGER :: nBeachCells
+  DOUBLE PRECISION :: BeachTimescale
+
+  namelist/boundparam/YesProbBeach,beachDistWindow,nBeachCells,BeachTimescale
+
 !*** BEHAVIOR MODULE PARAMETERS , FUCHS PARAMATERIZATION***
   
 !%%%%%%%%%%%%%%%%% VORTICITY RESPONSES
@@ -245,8 +261,24 @@
   namelist/settleparam/settlementon,holesExist,minpolyid,maxpolyid,minholeid,maxholeid,pedges,hedges
 
 
+! *** BIOFOUL MODULE PARAMETERS ***
+  DOUBLE PRECISION :: adherence
+  DOUBLE PRECISION :: v_A 
+  DOUBLE PRECISION :: cell_N
+  DOUBLE PRECISION :: growth_factor
+  DOUBLE PRECISION :: max_grazing_perday
+  DOUBLE PRECISION :: remin_rate_perday
+  DOUBLE PRECISION :: mortality_perday
+  DOUBLE PRECISION :: rho_bf
+  DOUBLE PRECISION :: rho_pl
+  INTEGER	   :: grazing_method
+  DOUBLE PRECISION :: kp
+  DOUBLE PRECISION :: K_NH4
+  DOUBLE PRECISION :: K_NO3
+  DOUBLE PRECISION :: Vp0
+  DOUBLE PRECISION :: PhyIS
 
-
+  namelist/bfparam/adherence,v_A,cell_N,growth_factor,max_grazing_perday,remin_rate_perday,mortality_perday,rho_bf,rho_pl,grazing_method,kp,K_NH4,K_NO3,Vp0,PhyIS
 
 !*** INPUT FILE NAME AND LOCATION PARAMETERS ***; 
 
@@ -326,8 +358,11 @@
                                     ! location: yes (.TRUE.) or no (.FALSE.)
   LOGICAL :: SaltTempMean           ! Average Salinity and temperature
   DOUBLE PRECISION :: TempOffset    ! Temperature offset applied to input
-  
-  LOGICAL :: WriteBottom            ! Write out bottom stress and height above bottom
+  LOGICAL :: LightOn		            ! Track light exposure for biofuling
+  LOGICAL :: LightMean  	          ! Average light
+  LOGICAL :: BiofoulOn		          ! Biofouling
+  LOGICAL :: BiofoulMean  	        ! Average Biofouling
+LOGICAL :: WriteBottom            ! Write out bottom stress and height above bottom
   LOGICAL :: WriteWaterDepth        ! Write Total water depth
   LOGICAL :: WriteZeta              ! Write zeta
   LOGICAL :: WriteBath              ! Write ROMS bathymetry(H)
@@ -340,6 +375,6 @@
 
   LOGICAL :: FreeSlip               ! use free slip condition?
 
-  namelist/other/seed,SaltTempOn,TrackCollisions,WriteHeaders,SaltTempMean,WriteBottom, &
+  namelist/other/seed,SaltTempOn,TrackCollisions,WriteHeaders,SaltTempMean,LightOn,LightMean,BiofoulOn,BiofoulMean,WriteBottom, &
                  WriteModelTiming,WriteProblemFile,ijbuff,ErrorFlag,FreeSlip,TempOffset,&
 				 WriteWaterDepth,WriteZeta,WriteBath

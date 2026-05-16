@@ -34,7 +34,7 @@ ifdef GFORTRAN
 
   CPPFLAGS  += -DGFORTRAN
   FFLAGS = -march=k8 -ffast-math -fno-cx-limited-range -O3 -funroll-loops --param max-unroll-times=4 -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
-#   FFLAGS = -g -O0   -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR)
+ #  FFLAGS = -g -O0   -ffree-line-length-none -cpp  $(CPPFLAGS) -I$(NETCDF_INCDIR) 
 endif
 
 ifdef PGI
@@ -62,7 +62,7 @@ NFCONFIG := on
 OBJS          = parameter_module.o hydrodynamic_module.o grid_module.o  \
 				random_module.o interpolation_module.o boundary_module.o\
 				pdf_module.o hor_turb_module.o	pppack.o ver_turb_module.o advection_module.o\
-				growth_module.o behavior_module.o
+				growth_module.o biofoul_module.o behavior_module.o 
 
 ifdef NFCONFIG        
 	NF_CONFIG ?= nf-config
