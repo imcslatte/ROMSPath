@@ -183,7 +183,7 @@ CONTAINS
   ! SUBROUTINE behave(Xpar,Ypar,Zpar,Pwc_zb,Pwc_zc,Pwc_zf,P_zb,P_zc,P_zf,        &
                     ! P_zetac,P_age,P_depth,P_U,P_V,P_angle,n,it,ex,ix,          &
                     ! daytime,p,bott,XBehav,YBehav,ZBehav)
-  SUBROUTINE behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,Psize,ex,ix,ng,behout)
+  SUBROUTINE behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,Psize,ex,ix,ng,bf,behout)
     ! USE PARAM_MOD, ONLY: us,dt,idt,twistart,twiend,Em,pi,daylength,Kd,thresh,  &
                          ! Sgradient,swimfast,swimstart,sink,Hswimspeed,         &
                          ! Swimdepth
@@ -195,13 +195,14 @@ CONTAINS
     USE PDF_MOD,  ONLY: norm,laplace
 	USE RANDOM_MOD, ONLY: genrand_real3
 	USE INT_MOD,    ONLY: polintd,getInterp3d,getInterp2D
+    USE BF_MOD,        ONLY: settling_vel_func
     IMPLICIT NONE
 
     ! DOUBLE PRECISION, INTENT(IN) :: daytime
     ! DOUBLE PRECISION, INTENT(IN) :: Xpar,Ypar,Zpar,Pwc_zb(:),Pwc_zc(:),        &
                                     ! Pwc_zf(:),P_zb,P_zc,P_zf,P_zetac,P_age,    &
                                     ! P_depth,P_U,P_V,P_angle,ex(3),ix(3)
-    DOUBLE PRECISION, INTENT(IN) :: Xpar,Ypar,Zpar,Psize,ex(3),ix(3)
+    DOUBLE PRECISION, INTENT(IN) :: Xpar,Ypar,Zpar,Psize,ex(3),ix(3),bf
 	INTEGER, INTENT(IN) :: ng
     ! LOGICAL, INTENT(OUT) :: bott
     DOUBLE PRECISION, INTENT(OUT) :: XBehav,YBehav,ZBehav,behout(4)
@@ -385,7 +386,9 @@ CONTAINS
 	elseif ((Behavior.EQ.10)) then
 	
 		 ZBehav=wb*dble(idt)/100.0D0
-	
+
+        elseif (Behavior.EQ.12) then !settling due to biofouling
+                ZBehav = settling_vel_func(Psize,bf,ng,Xpar,Ypar,Zpar,t_c)*dble(idt)
 	else 
 	    XBehav = 0.0
 		YBehav = 0.0
