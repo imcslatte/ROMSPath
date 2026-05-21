@@ -6,7 +6,7 @@
 !*** NUMBER OF PARTICLES ***
 $numparticles
 
-  numpar = 13500                ! Number of particles per file (total number for sim. on each node)  !CHANGE
+  numpar = 3000               ! Number of particles per file (total number for sim. on each node)  !CHANGE
                              ! numpar should equal the number of rows in the particle 
                              ! locations input file
 $end
@@ -15,9 +15,9 @@ $end
 !*** TIME PARAMETERS ***
 $timeparam
 
-  days   = 400            ! Number of days to run the model  !CHANGE
+  days   = 0.25            ! Number of days to run the model  !CHANGE
   iprint = 3600              ! Print interval for ROMSPath output (s); 3600 = every hour
-  dt     = 43200               ! External time step (duration between hydro model predictions) (s) 
+  dt     = 720               ! External time step (duration between hydro model predictions) (s) 
   idt    = 30                ! Internal (particle tracking) time step (s)
 
 $end
@@ -59,8 +59,8 @@ $hydroparam
   wavestd_prefix='/projects/f_hfuchs_1/accelvort/wave_snaildel_nestV04a/snaildel_waveaccel_'
               ,'/projects/f_hfuchs_1/accelvort/wave_snaildel_nestV04a/doppio_waveaccel_'       !CHANGE
   
-  Process_VA =.FALSE.			 ! PROCESS Vort./accel and write to netcdf file.
-  Process_WA =.FALSE.			 ! PROCESS Wave Accel and write to netcdf file.
+  Process_VA =.TRUE.			 ! PROCESS Vort./accel and write to netcdf file.
+  Process_WA =.TRUE.			 ! PROCESS Wave Accel and write to netcdf file.
 $end
 
 
@@ -68,14 +68,14 @@ $end
 !*** TURBULENCE MODULE PARAMETERS ***
 $turbparam
 
-  VTurbOn = .TRUE.           ! Vertical   Turbulence on (.TRUE.) or off (.FALSE.)
+  VTurbOn = .FALSE.           ! Vertical   Turbulence on (.TRUE.) or off (.FALSE.)
   serr=0.0001                !Aks Cubic spline error Cutoff
   smth=0.6                   !Aks Cubic spline smoothing parameter
   sub=4.0                    !Resolution multiplier for Aks cubic spline smoothing
   deltat=1.0 		     ! vertical tubrulence parameter time step (seconds)
   AKSback=1.0D-8             ! Background diffusivity
-  HTurbOn       = .TRUE.     ! Horizontal Turbulence on (.TRUE.) or off (.FALSE.)
-  ConstantHTurb = 10.0d0 !10.0d0        ! Constant value of horizontal turbulence (m2/s)
+  HTurbOn       = .FALSE.     ! Horizontal Turbulence on (.TRUE.) or off (.FALSE.)
+  ConstantHTurb = 2.85714d0 20.0d0        ! Constant value of horizontal turbulence (m2/s)
 $end
 
 
@@ -83,7 +83,7 @@ $end
 $advectparam
   scheme= 1                  ! 1 - 4th order RK,else no advection
   nsb=0		             !0=Neutral,1- Surface trapped, 2 - Bottom trapped           !CHANGE
-  vertdist=0              ! (m) Used for nsb-2 or 3. Particles held at vertdist from surface or bottom.
+  vertdist=0.25              ! (m) Used for nsb-2 or 3. Particles held at vertdist from surface or bottom.
   
 $end
 
@@ -102,7 +102,6 @@ $behavparam
                              !   boundaries, set this to TRUE; Escape means that the particle 
                              !   will stick to the boundary and stop moving
   NoBounce = .TRUE.	         ! don't allow particles that hit the bottom to "bounce"
-  
   pediage = 302400           ! Age when particle reaches max swim speed and can settle (s)
                              !   Note: for oyster larvae behavior types (4 & 5), 
                              !     pediage = age at which a particle becomes a pediveliger
@@ -110,7 +109,7 @@ $behavparam
                              !     the Settlement module is not on
   swimstart = 0.0            ! Age that swimming or sinking begins (s) 1 day = 1.*24.*3600.
   swimslow  = 0.0005         ! Swimming speed when particle begins to swim (m/s)
-  swimfast  = -0.0005          ! Maximum swimming speed (m/s)  0.005 m/s for 5 mm/s
+  swimfast  = 0.0005          ! Maximum swimming speed (m/s)  0.005 m/s for 5 mm/s
                              !   Note: for constant swimming speed for behavior type 1, 
                              !     set swimslow = swimfast = constant speed
   Sgradient = 1.0            ! Salinity gradient threshold that cues larval behavior (psu/m)
@@ -165,7 +164,7 @@ $growparam
   Growth=0                   ! Growth type (specify a number)
                              !   Note: The growth types numbers are:
                              !   0 none, 1 Use deadage, 2 Use Growth equation,
-  mortality =.FALSE.          ! TRUE if particles can die; else FALSE
+  mortality =.TRUE.          ! TRUE if particles can die; else FALSE
   deadage=3888000            ! Age at which a particle stops moving (i.e., dies) (s)
                              !   Note: deadage stops particle motion for all behavior types (0-6)
   initsize =0.0005             ! Initial size of Larva(Egg size?) in micrometers (any behavior except 12) or initial plastic radius in meters (behavior 12)
@@ -191,12 +190,12 @@ $end
 !  Note: These parameters are only used if Behavior = 3 
 $dvmparam
 
-!  twistart  = 4.801821       ! Time of twilight start (hr) **
-!  twiend    = 19.19956       ! Time of twilight end (hr) **
-!  daylength = 14.39774       ! Length of day (hr) **
-!  Em        = 1814.328       ! Irradiance at solar noon (microE m^-2 s^-1) **
-!  Kd        = 1.07           ! Vertical attenuation coefficient
-!  thresh    = 0.0166         ! Light threshold that cues behavior (microE m^-2 s^-1)
+  twistart  = 4.801821       ! Time of twilight start (hr) **
+  twiend    = 19.19956       ! Time of twilight end (hr) **
+  daylength = 14.39774       ! Length of day (hr) **
+  Em        = 1814.328       ! Irradiance at solar noon (microE m^-2 s^-1) **
+  Kd        = 1.07           ! Vertical attenuation coefficient
+  thresh    = 0.0166         ! Light threshold that cues behavior (microE m^-2 s^-1)
 
 $end
 
@@ -225,7 +224,7 @@ $end
 
 !*** BIOFOUL MODULE PARAMETERS ***
 $bfparam
-adherence = .1!.1   ! functions as adherence rate factor
+adherence = .3   ! functions as adherence rate factor
 v_A = 5.3e-16	!m^3. volume of one cell. Marchetti & Harrison, 2007 (median coastal Pseudo-Nitzschia)	
 cell_N = 2.4e9  ! cell/mmol N. Marchetti & Harrison, 2007. 
 growth_factor = 1.
@@ -262,14 +261,16 @@ $end
   
 $romsoutput
   suffix='.nc'	 !File suffice required 
-prefix = '/scratch/alpine/lacl8712/ROMS_Input/results_gom_standard_2006_FieldsAdded/his_gom_', 
+  prefix='/projects/f_hfuchs_1/data/ROMS/snaildel_nestV04a00/snaildel_his_'
+        ,'/projects/f_hfuchs_1/data/ROMS/snaildel_nestV04a00/doppio_his_'        !CHANGE
 
-  time_vname='ocean_time'    ! NetCDF Input Time variable  name (usually ocean_time)
-  time_dname='ocean_time'    ! NetCDF Input Time dimension name (usually ocean_time)
-  filenum = 0001             ! Number in first NetCDF input filename   !!*******CHANGE***********
+  
+  time_vname='time'    ! NetCDF Input Time variable  name (usually ocean_time)
+  time_dname='time'    ! NetCDF Input Time dimension name (usually ocean_time)
+  filenum = 0002          ! Number in first NetCDF input filename   !!*******CHANGE***********
   numdigits = 4              ! Number of digits in number portion of file name (with leading zeros)!!*******CHANGE***********
 !  startfile = .FALSE.        ! Is it the first file, i.e. does the file have an additional time step?!!*******CHANGE***********
-  multifile = .TRUE.        !.TRUE. means multiple files are used with indexing. .False. means only a single file/url
+  multifile = .FALSE.        !.TRUE. means multiple files are used with indexing. .False. means only a single file/url
 $end
 
 
@@ -279,7 +280,7 @@ $end
  ! parfile  = '/home/elhunter/ROMSPath/ROMSPathv3/TESTINIT.csv'     !Particle locations 
 $parloc
   
-  parfile  =  './init_par_Atch_2412_p2.csv'   !Particle locations !CHANGE
+  parfile  =  './init_nested.csv'   !Particle locations !CHANGE
 
 $end
 
@@ -299,9 +300,9 @@ $output
 
   !NOTE: Full path must already exist.  Model can create files, but not directories.
 
-  outpath = '/scratch/alpine/lacl8712/ROMSPath_Output/'      ! Location to write output files  !CHANGE
+  outpath = './'      ! Location to write output files  !CHANGE
                              ! Use outpath = './' to write in same folder as the executable	
-  NCOutFile = '2412_adhp1_p2'     ! Name of the NetCDF output files (do not include .nc)
+  NCOutFile = 'biofouling'     ! Name of the NetCDF output files (do not include .nc)
 
   outpathGiven = .TRUE.      ! If TRUE files are written to the path given in outpath
 
@@ -311,9 +312,9 @@ $output
   RunName      = 'ROMSPath v.4.2 test case'
   ExeDir       = '.'
   OutDir       = './output'
-  RunBy        = 'LAURA SUNBERG'
-  Institution  = 'CU BOULDER'
-  StartedOn    = 'A time in 2026'
+  RunBy        = 'ELI HUNTER'
+  Institution  = 'RUTGERS'
+  StartedOn    = 'A time in 2019'
 $end
 
 
@@ -335,11 +336,12 @@ $other
   BiofoulMean    = .TRUE.              
   WriteBottom  = .TRUE.      
   WriteWaterDepth  = .TRUE.
+
  
   TempOffset   = 0.0         ! Temperature offset applied to growth                      !CHANGE
                              ! (Temp used for growth) = (ROMS output temp) + TempOffset
 
-  TrackCollisions  = .TRUE. ! Write Bottom and Land Hit Files? .TRUE.=yes, .FALSE.=no ###NOT ACTIVE
+  TrackCollisions  = .FALSE. ! Write Bottom and Land Hit Files? .TRUE.=yes, .FALSE.=no ###NOT ACTIVE
   WriteHeaders     = .FALSE. ! Write .txt files with column headers? .TRUE.=yes, .FALSE.=no ###NOT ACTIVE
   WriteModelTiming = .FALSE. ! Write .csv file with model timing data? .TRUE.=yes, .FALSE.=no ###NOT ACTIVE
 
