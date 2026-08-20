@@ -127,7 +127,8 @@ IMPLICIT NONE
   INTEGER, PARAMETER :: pBath 	  = 22  ! ROMS Bathymetry (h)
 
   DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:) :: par
-  DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: P_Salt,P_Temp,mean_salt,mean_temp
+  DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: P_Salt,P_Temp,mean_salt,mean_temp  
+  DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: P_Light,mean_light,P_live_biofoul,P_dead_biofoul,P_total_biofoul, B_encounter,B_growth,B_grazing,B_mort,B_remin,P_settling_vel,mean_biofoul_live,mean_biofoul_dead,mean_encounter,mean_growth,mean_grazing,mean_mort,mean_remin
   DOUBLE PRECISION, ALLOCATABLE, DIMENSION( : ) :: P_HOB,P_bustr,P_bvstr
   INTEGER, ALLOCATABLE, DIMENSION(:) :: startpoly,endpoly,hitBottom,hitLand
   LOGICAL, ALLOCATABLE, DIMENSION(:) :: isIn
@@ -194,9 +195,12 @@ contains
     use param_mod,    only: numpar,days,dt,idt,seed,parfile,settlementon,   &
                       Behavior,TrackCollisions,SaltTempOn,Ngrid,SaltTempMean,    &
 					  xi_rho,eta_rho,t_b,t_c,t_f,tstep,initsize,WriteBottom,    &
-                      WriteHeaders,WriteModelTiming,ErrorFlag,getParams,Behavior
+                      WriteHeaders,WriteModelTiming,ErrorFlag,getParams,Behavior,&
+                      LightOn,BiofoulOn,LightMean,BiofoulMean, &
+                      rhop
 	use grid_mod,   only: InitGrid,GRIDS
 	use INT_MOD,   only: LL2ij,inside
+    use bf_mod,        only:biofoul_subr,settling_vel_func
     integer :: n,istat,ng,i,j,nmask
     logical :: ingrid,obound,inzgrid
     double precision, allocatable, dimension(:) :: pLon,pLat,Ipar,Jpar
@@ -204,6 +208,7 @@ contains
 
     integer :: in_island,inbounds,test
     double precision:: tdepth,zeta,dpran
+    double precision :: settling_vel
 	
 
 	
@@ -254,6 +259,52 @@ contains
 		ALLOCATE(mean_temp(numpar))
 		mean_salt = 0.0
 		mean_temp = 0.0
+	   ENDIF
+    ENDIF
+
+    IF(LightOn)THEN  
+      ALLOCATE(P_Light(numpar))
+      P_Light = 0.0
+	   IF(LightMean)THEN
+		ALLOCATE(mean_light(numpar))
+		mean_light = 0.0
+	   ENDIF
+    ENDIF
+    
+    IF(BiofoulOn)THEN   
+      ALLOCATE(P_live_biofoul(numpar))
+      P_live_biofoul = 0.0
+      ALLOCATE(P_dead_biofoul(numpar))
+      P_dead_biofoul = 0.0
+      ALLOCATE(P_total_biofoul(numpar))
+      P_total_biofoul = 0.0
+      ALLOCATE(B_encounter(numpar))
+      B_encounter = 0.0
+      ALLOCATE(B_growth(numpar))
+      B_growth = 0.0
+      ALLOCATE(B_grazing(numpar))
+      B_grazing = 0.0
+      ALLOCATE(B_mort(numpar))
+      B_mort = 0.0
+      ALLOCATE(B_remin(numpar))
+      B_remin = 0.0
+      ALLOCATE(P_settling_vel(numpar))
+      P_settling_vel = 0.0
+	   IF(BiofoulMean)THEN
+		ALLOCATE(mean_biofoul_live(numpar))
+		mean_biofoul_live = 0.0
+		ALLOCATE(mean_biofoul_dead(numpar))
+		mean_biofoul_dead = 0.0
+		ALLOCATE(mean_encounter(numpar))
+		mean_encounter = 0.0
+		ALLOCATE(mean_growth(numpar))
+		mean_growth = 0.0
+		ALLOCATE(mean_grazing(numpar))
+		mean_grazing = 0.0
+		ALLOCATE(mean_mort(numpar))
+		mean_mort = 0.0
+		ALLOCATE(mean_remin(numpar))
+		mean_remin = 0.0
 	   ENDIF
     ENDIF
 
@@ -426,9 +477,39 @@ contains
 		
 			enddo
 		endif
-	 
-		 
-		! close(10)
+
+	
+		if (LightOn) then
+			do n=1,numpar
+				if (isIn(n)) then
+				
+					tdepth = DBLE(-1.0)* getInterp2D("depth",int(par(n,pGID)),par(n,pX),par(n,pY),t_c)
+					zeta =  getInterp2D("zeta",int(par(n,pGID)),par(n,pX),par(n,pY),t_c)
+					 P_light(n)=getInterp3d("light",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_c,1,zeta,tdepth)
+					 par(n,pWD)=(DBLE(-1.0)*tdepth)+zeta
+					 par(n,pZeta)=zeta
+					 par(n,pBath)=(DBLE(-1.0)*tdepth)
+					 if (LightMean) then
+						mean_light(n)=P_light(n)
+						mI=1
+					 endif
+					 
+				 endif
+		
+			enddo
+		endif
+
+                if (BiofoulOn) then
+                        do n = 1,numpar
+                                if (isIn(n)) then
+                                        P_settling_vel(n) = settling_vel_func(par(n,pSize),P_total_biofoul(n),int(par(n,pgid)),par(n,px),par(n,py),par(n,pz),t_c)
+                                endif
+                        enddo
+                endif
+
+
+
+	! close(10)
     enddo
 	
 	
@@ -608,24 +689,25 @@ contains
   subroutine update_particles()
 
     USE PARAM_MOD,      ONLY: numpar,xi_rho,eta_rho,s_rho,s_w,xi_u,eta_u,	   &
-							  idt,HTurbOn,VTurbOn,settlementon,xi_v,eta_v,     &
-                              Behavior,SaltTempOn,OpenOceanBoundary,Swimdepth, &
+							  idt,dt,HTurbOn,VTurbOn,settlementon,xi_v,eta_v,     &
+                              Behavior,SaltTempOn,LightOn,BiofoulOn,OpenOceanBoundary,NoBounce,Swimdepth, &
                               TrackCollisions,WriteModelTiming,mortality,      &
                               ErrorFlag,t_b,t_c,t_f,Ngrid,vertdist,scheme,nsb, &
-							  SaltTempMean,WriteBottom,maxsize,Process_VA							  
+			      SaltTempMean,LightMean,BiofoulMean,WriteBottom,maxsize,Process_VA, &
+                              rhop,nBeachCells,YesProbBeach      !rhop							  
     !USE SETTLEMENT_MOD, ONLY: isSettled,testSettlement
 #ifdef GROWTH
 	USE GROWTH_MOD,   ONLY:  growlarva
 #endif
 
     USE BEHAVIOR_MOD,   ONLY: behave
-    USE BOUNDARY_MOD,   ONLY: bounds
-    USE GRID_MOD,    ONLY: getSlevel,getWlevel,GRIDS
+    USE BOUNDARY_MOD,   ONLY: bounds,IsBeachPossible,WhetherToBeach,Unbeach
+    USE GRID_MOD,       ONLY: getSlevel,getWlevel,GRIDS
     USE HTURB_MOD,      ONLY: HTurb
     USE VTURB_MOD,      ONLY: VTurb
     USE ADVECTION_MOD,  ONLY: RKAdvect
-    USE INT_MOD,        ONLY: getinterp2d,getinterp3d,polintd,getInterpStr
-
+    USE INT_MOD,        ONLY: getinterp2d,getinterp3d,polintd,sinintd,getInterpStr
+    USE BF_MOD,        ONLY: biofoul_subr,settling_vel_func
     IMPLICIT NONE
 
     ! Iteration Variables
@@ -643,10 +725,10 @@ contains
 
     ! Boundaries
     INTEGER :: intersectf,skipbound,inbounds,reflects,inpoly,nmask,Inode,Jnode &
-	  ,ngid
+	  ,ngid,m(2*nBeachCells,2*nBeachCells)
     DOUBLE PRECISION :: reflect,fintersectX,fintersectY,freflectX,freflectY,   &
-      Xpos,Ypos,nXpos,nYpos,pm,pn
-    LOGICAL :: ingrid,obound,hbot,htop
+      Xpos,Ypos,nXpos,nYpos,pm,pn,parLon,parLat,coord_close(2,2),node_dists(2)
+    LOGICAL :: ingrid,obound,hbot,htop,InBeachWindow,yesBeach
 
     ! Advection
     DOUBLE PRECISION :: AdvectX,AdvectY,AdvectZ,maxpartdepth,minpartdepth,     &
@@ -656,8 +738,10 @@ contains
 
 	  
 	DOUBLE PRECISION :: tempX,tempY,tdepth,zeta,zetab,zetac,zetaf,behout(4)
-	  
-
+	 
+     ! Biofouling
+     DOUBLE PRECISION :: settling_vel,daylength_val  
+     INTEGER :: ng
    
     DO n=1,numpar
 
@@ -686,8 +770,15 @@ contains
       ! !If there are open ocean boundaries and the current
       ! !  particle has exited the model domain via them, skip it
 	  if(OpenOceanBoundary)then
-         if(.not.isIn(n)) cycle
-       endif
+                if(.not.isIn(n)) cycle
+          endif
+        if (NoBounce) then
+                if (ABS(par(n,pStatus)- 1.2) < 0.01) then
+                        cycle
+                elseif (ABS(par(n,pStatus)+9.) < 0.01) then
+                        cycle
+                endif
+        endif
 		
        !Update particle age
        par(n,pAge) = par(n,pAge) + float(idt)
@@ -784,26 +875,26 @@ contains
 
 	   
 
-  
-      ! ! *********************************************************
-      ! ! *                                                       *
-      ! ! *                       Behavior                        *
-      ! ! *                                                       *
-      ! ! *********************************************************
+        !moved below beaching algorithm 
+      !! ! *********************************************************
+      !! ! *                                                       *
+      !! ! *                       Behavior                        *
+      !! ! *                                                       *
+      !! ! *********************************************************
 
 
-	 
-	   call CPU_TIME(times(4))
-	   !write(*,*) times(4)-times(3)
-	   
-		 
-		CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),behout)
-		par(n,pAcc)=behout(1)
-		par(n,pVort)=behout(2)
-		par(n,pbehaveW)=behout(3)
-		par(n,pSSF)=behout(4)
-          
-
+      !   
+      !     call CPU_TIME(times(4))
+      !     !write(*,*) times(4)-times(3)
+      !     
+      !  	 
+      !  	CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),P_total_biofoul(n),behout)
+      !  	par(n,pAcc)=behout(1)
+      !  	par(n,pVort)=behout(2)
+      !  	par(n,pbehaveW)=behout(3)
+      !  	par(n,pSSF)=behout(4)
+      !          WRITE(*,*) 'ZBehav: ', ZBehav 
+      !          WRITE(*,*) 'P_total_biofoul: ', P_total_biofoul(n)
 
 	
 	 
@@ -834,6 +925,56 @@ contains
 			exit
 		endif
 	  enddo
+
+if (YesProbBeach) then
+        !Probabilistic beaching
+        !Note that beaching is not fully integrated with nested grids
+        !check if beached/in beaching window
+                CALL IsBeachPossible(newXPos,newYPos,int(par(n,pGID)),coord_close,node_dists,m,InBeachWindow)
+    
+
+        !determine whether to beach
+        yesBeach = .FALSE.
+        if (InBeachWindow) then
+                yesBeach = WhetherToBeach()
+        endif
+
+        !if beached but shouldn't be, unbeach
+        !if not beached but should be, beach
+        if (InBeachWindow .AND. .NOT.ingrid .AND. .NOT.yesBeach) then
+                CALL Unbeach(int(par(n,pGID)),par(n,pX),par(n,pY),newXPos,newYPos,coord_close,node_dists,m,tempX,tempY)
+                ingrid = .TRUE.
+        elseif (ingrid .AND. yesBeach) then
+                !not necessary to find exact location since normal beaching doesn't update final location?
+                !update status
+                ingrid = .FALSE.
+                obound = .TRUE.
+        endif
+endif
+      ! ! *********************************************************
+      ! ! *                                                       *
+      ! ! *                       Behavior                        *
+      ! ! *                                                       *
+      ! ! *********************************************************
+
+
+	 
+	   call CPU_TIME(times(4))
+	   !write(*,*) times(4)-times(3)
+	   
+		 
+		CALL behave(Xpar,Ypar,Zpar,XBehav,YBehav,ZBehav,par(n,pSize),ex,ix,int(par(n,pGID)),P_total_biofoul(n),behout)
+		par(n,pAcc)=behout(1)
+		par(n,pVort)=behout(2)
+		par(n,pbehaveW)=behout(3)
+		par(n,pSSF)=behout(4)
+
+      ! ! *********************************************************
+      ! ! *                                                       *
+      ! ! *     Update Particle Locations and Check Boundaries in Z   *
+      ! ! *                                                       *
+      ! ! *********************************************************
+
 	  tdepth = DBLE(-1.0)* getInterp2D("depth",int(par(n,pGID)),tempX,tempY,t_c)
 	  
 	  ey(1) =  DBLE(1.0)*getInterp2D("zeta",int(par(n,pGID)),tempX,tempY,t_b)
@@ -984,6 +1125,101 @@ contains
 					 
 			    
 		endif
+
+
+	  ! ! *********************************************************
+      ! ! *                                                       *
+      ! ! *                    Light 	                          *
+      ! ! *                                                       *
+      ! ! *********************************************************
+	  
+	   call CPU_TIME(times(6))
+		if (LightOn) then
+				
+				zetac =  getInterp2D("zeta",int(par(n,pGID)),par(n,pX),par(n,pY),t_c)
+				zetaf =  getInterp2D("zeta",int(par(n,pGID)),par(n,pX),par(n,pY),t_c)
+			  
+				ey(2)=getInterp3d("light",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_c,1,zetac,tdepth)	
+				ey(3)=getInterp3d("light",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_f,1,zetaf,tdepth)	
+                                ng = int(par(n,pGID)) 
+                                !daylength_val = HYDRODATA(int(ng)%daylength(t_c)
+                                !daylength_val = daylength_val*60.D0*60.D0       !convert units
+
+                                if (ey(2) > 0) then !.and. (ix(2) < (ex(2)+daylength_val/2.D0))) then ! afternoon                                 
+                                        P_light(n)=sinintd(int(par(n,pGID)),ex(2),ey(2),ix(2),t_c)
+                                        !if (i .EQ. 1) then
+                                        !if (ex(2) > 0) then 
+                                        !       WRITE(*,*) 'in if 1'
+                                        !       WRITE(*,*) 'P_light(n):', P_light(n)
+                                        ! endif
+                                else if (ey(3) > 0) then !.and. (ix(2) >= (ex(2)+daylength_val/2.D0))) then ! morning
+                                        P_light(n)=sinintd(int(par(n,pGID)),ex(3),ey(3),ix(2),t_c)
+                                        !if (i .EQ. 1) then
+                                         !     WRITE(*,*) 'ex(3)', ex(3)
+                                          !    WRITE(*,*) 'ey(3)', ey(3)
+                                           !   WRITE(*,*) 'ix(2)', ix(2)
+                                            !  WRITE(*,*) 'P_light(n): ',P_light(n)
+                                       ! endif
+                                else
+                                        P_light(n) = 0.
+                                endif
+			        
+	
+				if (LightMean) then
+					mean_light(n)=mean_light(n)+P_light(n)
+				endif
+					 
+			    
+		endif
+
+	  ! ! *********************************************************
+      ! ! *                                                         *
+      ! ! *                    Biofoul		                        *
+      ! ! *                                                         *
+      ! ! *********************************************************
+	  
+	   call CPU_TIME(times(6))
+		if (BiofoulOn) then
+			
+                                ! get PP (primary productivity, used as growth
+                                ! rate)	
+				!zetac =  getInterp2D("zeta",int(par(n,pGID)),par(n,pX),par(n,pY),t_c)
+			  
+				!ey(2)=getInterp3d("PP",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_c,1,zetac,tdepth)	
+				!ey(3)=getInterp3d("PP",int(par(n,pGID)),par(n,pX),par(n,pY),par(n,pZ),t_f,1,zetac,tdepth)	
+                                
+
+                                !if (isnan(ey(2)) .and. isnan(ey(3))) then
+                                !        PP = 0
+                                !if (ey(2) > 0) then !.and. (ix(2) < (ex(2)+daylength_val/2.d0))) then ! afternoon  was dt/2 instead of daylength               
+                                  !      WRITE(*,*) "ey(2)", ey(2)
+                                   !     WRITE(*,*) "ey(2) > 0"
+                                !        PP=sinintd(int(par(n,pGID)),ex(2),ey(2),ix(2),t_c)
+                                !else if (ey(3) > 0) then !.and. (ix(2) >= (ex(2)+daylength_val/2.D0))) then ! morning
+                                !        PP=sinintd(int(par(n,pGID)),ex(3),ey(3),ix(2),t_c)
+                                    !    WRITE(*,*) "ey(3) > 0"
+                               ! else
+                                !        PP=0.d0
+                                !endif
+
+                                P_settling_vel(n) = settling_vel_func(par(n,pSize),P_total_biofoul(n),int(par(n,pgid)),par(n,px),par(n,py),par(n,pz),t_c)
+                                !calculate biofouling! (cells/m^2 plastic)
+                                CALL biofoul_subr(P_live_biofoul(n),P_dead_biofoul(n),P_total_biofoul(n),par(n,pSize),P_settling_vel(n),idt,int(par(n,pgid)),par(n,px),par(n,py),par(n,pz),ix,ex,P_light(n),B_encounter(n),B_growth(n),B_grazing(n),B_mort(n),B_remin(n)) 
+
+				if (BiofoulMean) then
+					mean_Biofoul_live(n)=mean_biofoul_live(n)+P_live_biofoul(n)
+					mean_Biofoul_dead(n)=mean_biofoul_dead(n)+P_dead_biofoul(n)
+                                        mean_encounter(n) = mean_encounter(n)+B_encounter(n)
+                                        mean_growth(n) = mean_growth(n)+B_growth(n)
+                                        mean_grazing(n) = mean_grazing(n)+B_grazing(n)
+                                        mean_mort(n) = mean_mort(n)+B_mort(n)
+                                        mean_remin(n) = mean_remin(n)+B_remin(n)
+				endif
+					 
+			    
+		endif
+	  		       
+
       ! ! *****************************************************************
       ! ! *                      End of Particle Loop                     *
       ! ! *****************************************************************
@@ -1010,7 +1246,7 @@ contains
 
 
   subroutine dataOutput()
-    use param_mod,   only: numpar,SaltTempOn,TrackCollisions,stokesprefix,turbstd_v_a_prefix
+    use param_mod,   only: numpar,SaltTempOn,LightOn,BiofoulOn,TrackCollisions,stokesprefix,turbstd_v_a_prefix
 	USE INT_MOD,        ONLY: getinterp2d
     integer :: n
     double precision, dimension(numpar) :: pLon,pLat
@@ -1139,12 +1375,12 @@ contains
 
 	  SUBROUTINE createNetCDF(dob)
 		USE PARAM_MOD, ONLY: numpar,NCOutFile,outpath,outpathGiven,NCtime,         &
-			RunName,ExeDir,OutDir,RunBy,Institution,StartedOn,SaltTempMean,         &
-			TrackCollisions,SaltTempOn,Ngrid,days,idt,VTurbOn,HTurbOn,deltat,      &
+			RunName,ExeDir,OutDir,RunBy,Institution,StartedOn,SaltTempMean,LightMean,BiofoulMean,         &
+			TrackCollisions,SaltTempOn,LightOn,BiofoulOn,Ngrid,days,idt,VTurbOn,HTurbOn,deltat,      &
 			serr,smth,sub,AKSback,maxsize,tempcut,initsize,deadage,		&
 			a0,a1,a2,a3,a4,a5,a6,a7,a8,TempOffset,WriteBottom,WriteWaterDepth,Behavior,		&
 			vort_cr,vort_sat,b0pv,b1pv,b0wv,b1w,acc_cr,acc_sat,&
-			b0pa,b1pa,b0wa,va_flag,OpenOceanBoundary,swimfast,Process_VA,	&
+			b0pa,b1pa,b0wa,va_flag,OpenOceanBoundary,NoBounce,swimfast,Process_VA,	&
 			WriteWaterDepth,seed,WriteZeta,WriteBath
 		USE GRID_MOD, ONLY: reftime, time_units
 		USE netcdf
@@ -1161,7 +1397,8 @@ contains
 	    character(len=20) :: sdatetime
 		INTEGER :: STATUS,NCID,numparID,timeID,pageID,modtimeID,lonID,latID,ngID,       &
 				   depthID,statusID,hitBID,hitLID,dobID,saltID,tempID,date_time(8),		&
-				   HOBID,bustrID,bvstrID,VORTID,ACCID,BWID,SSFID,WDID,BATHID,ZETAID
+				   HOBID,bustrID,bvstrID,VORTID,ACCID,BWID,SSFID,WDID,BATHID,ZETAID, &
+                                   lightID,biofoulLiveID,biofoulDeadID,encounterID,growthID,grazingID,mortID,reminID,settling_velID,sizeID 
 #ifdef GROWTH		
 		INTEGER ::		   sizeID
 #endif
@@ -1302,7 +1539,66 @@ contains
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			ENDIF
 			
-			
+			IF(LightOn)THEN
+			  STATUS = NF90_DEF_VAR(NCID,'light',NF_FLOAT,(/numparID,timeID/), &
+									lightID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Light var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			ENDIF
+
+			IF(BiofoulOn)THEN
+			  STATUS = NF90_DEF_VAR(NCID,'biofoul_live',NF_DOUBLE,(/numparID,timeID/), &
+									biofoulLiveID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Living biofoul var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'biofoul_dead',NF_DOUBLE,(/numparID,timeID/), &
+									biofoulDeadID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Dead biofoul var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'encounter',NF_DOUBLE,(/numparID,timeID/), &
+									encounterID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Encounter var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'growth',NF_DOUBLE,(/numparID,timeID/), &
+									growthID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Growth var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'grazing',NF_DOUBLE,(/numparID,timeID/), &
+									grazingID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Grazing var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'mort',NF_DOUBLE,(/numparID,timeID/), &
+									mortID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Mort var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_DEF_VAR(NCID,'remineralization',NF_DOUBLE,(/numparID,timeID/), &
+									reminID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Remineralization var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+			  STATUS = NF90_DEF_VAR(NCID,'settling_vel',NF_DOUBLE,(/numparID,timeID/), &
+									settling_velID,deflate_level=1,shuffle=.true.)
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem createNetCDF: ',        &
+												  'Settling_vel var'
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			ENDIF
+		
+
 			IF(WriteBottom)THEN
 			  STATUS = NF90_DEF_VAR(NCID,'HOB',NF_FLOAT,(/numparID,timeID/), &
 									HOBID,deflate_level=1,shuffle=.true.)
@@ -1542,13 +1838,117 @@ contains
 									"Temperature at the particle's location")
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
-			  STATUS = NF90_PUT_ATT(NCID, tempID, "units", "° Celsius")
+			  STATUS = NF90_PUT_ATT(NCID, tempID, "units", "ï¿½ Celsius")
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 
 			  STATUS = NF90_PUT_ATT(NCID, tempID, "field",                         &
 									"temperature, scalar, series")
 			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			ENDIF
+						
+                        IF(LightOn)THEN
+			  !light
+			  STATUS = NF90_PUT_ATT(NCID, lightID, "long_name",                     &
+									"Light at the particle's location")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,lightID, "field", "light, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, lightID, "units", "watt m-2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			ENDIF
+                        
+                        IF(BiofoulOn)THEN
+			  !biofouling
+			  STATUS = NF90_PUT_ATT(NCID, biofoulLiveID, "long_name",                     &
+									"Living biofouling on the particle")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,biofoulLiveID, "field", "live biofouling, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, biofoulLiveID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, biofoulDeadID, "long_name",                     &
+									"Dead biofouling on the particle")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,biofoulDeadID, "field", "dead biofouling, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, biofoulDeadID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, encounterID, "long_name",                     &
+									"Encounter term in Kooi model")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,encounterID, "field", "encounter, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, encounterID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+			  STATUS = NF90_PUT_ATT(NCID, growthID, "long_name",                     &
+									"Growth term in Kooi model")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,growthID, "field", "growth, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, growthID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+			  STATUS = NF90_PUT_ATT(NCID, grazingID, "long_name",                     &
+									"Grazing term in Kooi model")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,grazingID, "field", "grazing, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, grazingID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+			  STATUS = NF90_PUT_ATT(NCID, mortID, "long_name",                     &
+									"Mort term in Kooi model")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,mortID, "field", "mort, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, mortID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+			  STATUS = NF90_PUT_ATT(NCID, reminID, "long_name",                     &
+									"Remineralization term in Kooi model")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,reminID, "field", "remin, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, reminID, "units", "number/m^2")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+
+
+			  STATUS = NF90_PUT_ATT(NCID, settling_velID, "long_name",                     &
+									"Settling velocity of the particle")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS=NF90_PUT_ATT(NCID,settling_velID, "field", "settling velocity, scalar, series")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+
+			  STATUS = NF90_PUT_ATT(NCID, settling_velID, "units", "m/s")
+			  IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			ENDIF
+
 
 		   IF(WriteBottom)THEN
 			  !HIB
@@ -1699,6 +2099,10 @@ contains
 				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS) 
 			endif
 			
+			If( NoBounce) then
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "NoBounce", 'TRUE')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS) 
+			endif
 			STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "swimfast", swimfast)
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
 			
@@ -1833,7 +2237,29 @@ contains
 			endif
 			STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "TempOffset", TempOffset)
 			IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
-			! call date_and_time(sdate,stime,zone,date_time)
+
+
+			if (LightMean) then
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "LightMean", 'TRUE')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			else
+			
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "LightMean", 'FALSE')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			endif
+			
+            if (BiofoulMean) then
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "BiofoulMean", 'TRUE')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			else
+			
+				STATUS = NF90_PUT_ATT(NCID, NF90_GLOBAL, "BiofoulMean", 'FALSE')
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF_STRERROR(STATUS)
+			endif
+                        
+                        
+			
+                        ! call date_and_time(sdate,stime,zone,date_time)
 			! write(sdatetime,"(I4'/'I0.2'/'I0.2' 'I0.2':'I0.2':'I0.2)") date_time(1),date_time(2),date_time(3),date_time(5),date_time(6),date_time(7)
 			! ! write(*,"(I4 I2 I2 I2 I2 I2)"),date_time(1),date_time(2),date_time(3),date_time(5),date_time(6),date_time(7)
 			! write(*,*) sdatetime
@@ -1868,8 +2294,8 @@ contains
 
 	  END SUBROUTINE createNetCDF
   SUBROUTINE writeNetCDF(time,lon,lat)
-		USE PARAM_MOD, ONLY: numpar,SaltTempOn,NCOutFile,outpath,outpathGiven,     &
-			NCtime,TrackCollisions,Ngrid,SaltTempMean,WriteBottom,WriteWaterDepth,Behavior,		&
+		USE PARAM_MOD, ONLY: numpar,SaltTempOn,LightOn,BiofoulOn,NCOutFile,outpath,outpathGiven,     &
+			NCtime,TrackCollisions,Ngrid,SaltTempMean,LightMean,BiofoulMean,WriteBottom,WriteWaterDepth,Behavior,		&
 			Process_VA,WriteWaterDepth,WriteZeta,WriteBath
 		USE GRID_MOD, ONLY: reftime
 		USE netcdf
@@ -1885,7 +2311,8 @@ contains
 		CHARACTER(LEN=200) :: ncFile
 		INTEGER :: STATUS,NCID,modtimeID,pageID,lonID,latID,depthID,hitBID,hitLID, &
 				   statusID,saltID,tempID,ngID,n,HOBID,bustrID,bvstrID,BehaveID,WDID, &
-				   ZETAID,BATHID
+				   ZETAID,BATHID,lightID, &
+                           biofoulLiveID,biofoulDeadID,encounterID,growthID,grazingID,mortID,reminID,settling_velID,sizeID
 #ifdef GROWTH		
 		INTEGER ::		   sizeID
 #endif
@@ -2032,7 +2459,6 @@ contains
 					mean_salt(n)=0.0
 					mean_temp(n)=0.0
 				enddo
-				mI=0
 					
 			else
 				STATUS = NF90_INQ_VARID(NCID, "salinity", saltID)
@@ -2052,6 +2478,168 @@ contains
 			ENDIF
 		  ENDIF
 		  
+		  !Light
+		  if (LightOn) then
+		  	if (LightMean) then
+				do n=1,numpar
+					mean_light(n)=mean_light(n)/mI
+				enddo
+					
+				STATUS = NF90_INQ_VARID(NCID, "light", lightID)
+				STATUS = NF90_PUT_VAR(NCID, lightID, mean_light,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put light, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+			    do n=1,numpar
+					mean_light(n)=0.0
+				enddo
+
+			else
+				STATUS = NF90_INQ_VARID(NCID, "light", lightID)
+				STATUS = NF90_PUT_VAR(NCID, lightID, P_light,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put light, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+			ENDIF
+		  ENDIF
+		  
+                  !Biofouling
+		  if (BiofoulOn) then
+		  	if (BiofoulMean) then
+				do n=1,numpar
+					mean_biofoul_live(n)=mean_biofoul_live(n)/mI
+					mean_biofoul_dead(n)=mean_biofoul_dead(n)/mI
+                                        mean_encounter(n)=mean_encounter(n)/mI
+                                        mean_growth(n)=mean_growth(n)/mI
+                                        mean_grazing(n)=mean_grazing(n)/mI
+                                        mean_mort(n)=mean_mort(n)/mI
+                                        mean_remin(n)=mean_remin(n)/mI
+				enddo
+					
+				STATUS = NF90_INQ_VARID(NCID, "biofoul_live", biofoulLiveID)
+				STATUS = NF90_PUT_VAR(NCID, biofoulLiveID, mean_biofoul_live,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put live biofouling, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "biofoul_dead", biofoulDeadID)
+				STATUS = NF90_PUT_VAR(NCID, biofoulDeadID, mean_biofoul_dead,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put biofouling, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "encounter", encounterID)
+				STATUS = NF90_PUT_VAR(NCID, encounterID, mean_encounter,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put encounter, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "growth", growthID)
+				STATUS = NF90_PUT_VAR(NCID, growthID, mean_growth,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put growth, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "grazing", grazingID)
+				STATUS = NF90_PUT_VAR(NCID, grazingID, mean_grazing,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put grazing, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "mort", mortID)
+				STATUS = NF90_PUT_VAR(NCID, mortID, mean_mort,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put mort, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "remineralization", reminID)
+				STATUS = NF90_PUT_VAR(NCID, reminID, mean_remin,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put remineralization, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+			    do n=1,numpar
+					mean_biofoul_live(n)=0.0
+					mean_biofoul_dead(n)=0.0
+                                        mean_encounter(n)=0.0
+                                        mean_growth(n)=0.0
+                                        mean_grazing(n)=0.0
+                                        mean_mort(n)=0.0
+                                        mean_remin(n)=0.0
+				enddo
+				
+
+			else
+				STATUS = NF90_INQ_VARID(NCID, "biofoul_live", biofoulLiveID)
+				STATUS = NF90_PUT_VAR(NCID, biofoulLiveID, P_live_biofoul,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put live biofoul, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "biofoul_dead", biofoulDeadID)
+				STATUS = NF90_PUT_VAR(NCID, biofoulLiveID, P_dead_biofoul,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put dead biofoul, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "encounter", encounterID)
+				STATUS = NF90_PUT_VAR(NCID, encounterID, B_encounter,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put encounter, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "growth", growthID)
+				STATUS = NF90_PUT_VAR(NCID, growthID, B_growth,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put growth, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "grazing", grazingID)
+				STATUS = NF90_PUT_VAR(NCID, grazingID, B_grazing,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put grazing, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "mort", mortID)
+				STATUS = NF90_PUT_VAR(NCID, mortID, B_mort,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put mort, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+				STATUS = NF90_INQ_VARID(NCID, "remineralization", reminID)
+				STATUS = NF90_PUT_VAR(NCID, reminID, B_remin,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put remineralization, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+
+			ENDIF
+				STATUS = NF90_INQ_VARID(NCID, "settling_vel", settling_velID)
+				STATUS = NF90_PUT_VAR(NCID, settling_velID, P_settling_vel,       &
+									start = (/ 1, prcount /),   &
+									count = (/ numpar,  1 /))
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) 'Problem put settling_vel, time: ',time
+				IF(STATUS /= NF90_NOERR) WRITE(*,*) NF90_STRERROR(STATUS)
+		  ENDIF
+
+		  mI=0        		  
 		  
 		  if (WriteBottom) then
 				STATUS = NF90_INQ_VARID(NCID, "HOB", HOBID)
@@ -2235,10 +2823,25 @@ contains
     else
       write(*,*) ' Ocean Boundary:        = Closed'
     endif
+    if(NoBounce)then
+      write(*,*) ' Bounces Allowed:        = No'
+    else
+      write(*,*) ' Bounces Allowed:        = Yes'
+    endif
     if(SaltTempOn)then
       write(*,*) ' Salt & Temp Output:    = On'
     else
       write(*,*) ' Salt & Temp Output:    = Off'
+    endif
+    if(LightOn)then
+      write(*,*) ' Light Output:    = On'
+    else
+      write(*,*) ' Light Output:    = Off'
+    endif
+    if(BiofoulOn)then
+      write(*,*) ' Biofoul Output:    = On'
+    else
+      write(*,*) ' Biofoul Output:    = Off'
     endif
     if(TrackCollisions)then
       write(*,*) ' Track Collisions:      = Yes'

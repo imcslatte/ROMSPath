@@ -12,14 +12,13 @@ $numparticles
 $end
 
 
-
 !*** TIME PARAMETERS ***
 $timeparam
 
   days   = 0.25            ! Number of days to run the model  !CHANGE
   iprint = 3600              ! Print interval for ROMSPath output (s); 3600 = every hour
   dt     = 720               ! External time step (duration between hydro model predictions) (s) 
-  idt    = 60                ! Internal (particle tracking) time step (s)
+  idt    = 30                ! Internal (particle tracking) time step (s)
 
 $end
 
@@ -34,6 +33,14 @@ $hydroparam
   constSalt  = 0.0           ! Constant value for Salt if readSalt is .FALSE.
   readTemp   = .TRUE.        ! If .TRUE. read in temperature          (temp) from NetCDF file, else use constTemp
   constTemp  = 0.0           ! Constant value for Temp if readTemp is .FALSE.
+  readLight  = .TRUE.	       ! If .TRUE. read in light. used for biofouling.   (light) from NetCDF file
+  readDaylength = .TRUE.     ! If .TRUE. read in precalculated daylength. used for biofouling.   (daylength) from NetCDF file
+  readPhytoplankton  = .TRUE.	     ! If .TRUE. read in phytoplankton. used for biofouling. (phytoplankton) from NetCDF file
+  readZooplankton = .TRUE.   ! If .TRUE. read in zooplankton. used for biofouling. (zooplankton) from NetCDF file
+  readPP     = .TRUE.	       ! If .TRUE. read in precalculated primary productivity. used for biofouling. (PP) from NetCDF file 
+  readRho    = .TRUE. 	     ! If .TRUE. read in water density. used for biofouling settling velocity. (rho) from NetCDF file
+  readNH4    = .TRUE.	       ! If .TRUE. read in NH4. used for biofouling. (NH4) in NetCDF file
+  readNO3    = .TRUE.	       ! If .TRUE. read in NO3. Used in biofouling. (NO3) in NetCDF file
   readU      = .TRUE.        ! If .TRUE. read in u-momentum component (U   ) from NetCDF file, else use constU
   constU     = 0.0           ! Constant value for U if readU is .FALSE.
   readV      = .TRUE.        ! If .TRUE. read in v-momentum component (V   ) from NetCDF file, else use constV
@@ -43,8 +50,7 @@ $hydroparam
   readAks    = .TRUE.        ! If .TRUE. read in salinity vertical diffusion coefficient (Aks ) from NetCDF file, else 
                              ! use constAks
   constAks   = 0.0           ! Constant value for Aks if readAks is .FALSE.
-  readDens   = .FALSE.
-  constDens  = 0.0 
+
 
   stokesprefix='/projects/f_hfuchs_1/stokes/snaildel_nestV04a/snaildel_stokes_'
               ,'/projects/f_hfuchs_1/stokes/snaildel_nestV04a/doppio_stokes_'       !CHANGE
@@ -87,7 +93,7 @@ $end
 !*** BEHAVIOR MODULE PARAMETERS ***
 $behavparam
 
-  Behavior = 0               ! Behavior type (specify a number)              !CHANGE
+  Behavior = 12               ! Behavior type (specify a number)              !CHANGE
                              !   Note: The behavior types numbers are: 
                              !     0 Passive, 1 swim , 10: Fuchs Behavior parameterization. , 11: No Behavior,output vorticity/acceleration.
 							 
@@ -95,6 +101,7 @@ $behavparam
   OpenOceanBoundary = .TRUE. ! Note: If you want to allow particles to "escape" via open ocean 
                              !   boundaries, set this to TRUE; Escape means that the particle 
                              !   will stick to the boundary and stop moving
+  NoBounce = .TRUE.	         ! don't allow particles that hit the bottom to "bounce"
   pediage = 302400           ! Age when particle reaches max swim speed and can settle (s)
                              !   Note: for oyster larvae behavior types (4 & 5), 
                              !     pediage = age at which a particle becomes a pediveliger
@@ -118,6 +125,15 @@ $behavparam
 
 $end
 
+!*** BOUNDARY MODULE PARAMETERS ***
+$boundparam
+
+  YesProbBeach = .TRUE.      ! if true, use probabilistic beaching module. must set beachdist below.
+  beachDistWindow = 4.	     ! only used if YesProbBeach = True. Gives distance from coastline of "beaching window"
+  nBeachCells = 5 	         !  only used if YesProbBeach = True. This should be the maximum possible number of cells in beaching window
+  BeachTimescale = 14.        ! only used if YesProbBeach = True. Gives characteristic beaching timescale.
+
+$end
 
 !*** BEHAVIOR MODULE PARAMETERS ***
 $fuchsparam
@@ -151,7 +167,7 @@ $growparam
   mortality =.TRUE.          ! TRUE if particles can die; else FALSE
   deadage=3888000            ! Age at which a particle stops moving (i.e., dies) (s)
                              !   Note: deadage stops particle motion for all behavior types (0-6)
-  initsize =250.0             ! Initial size of Larva(Egg size?)
+  initsize =0.0005             ! Initial size of Larva(Egg size?) in micrometers (any behavior except 12) or initial plastic radius in meters (behavior 12)
   maxsize=1000.0                 ! Maximum size of larva. (Stop moving after this)
   tempcut=2.0                ! Temperature cutoff for growth
   a0=-29.8                   !  Growth Coefficient 0
@@ -206,9 +222,27 @@ $end
 
 
 
+!*** BIOFOUL MODULE PARAMETERS ***
+$bfparam
+adherence = .3   ! functions as adherence rate factor
+v_A = 5.3e-16	!m^3. volume of one cell. Marchetti & Harrison, 2007 (median coastal Pseudo-Nitzschia)	
+cell_N = 2.4e9  ! cell/mmol N. Marchetti & Harrison, 2007. 
+growth_factor = 1.
+max_grazing_perday = .6
+mortality_perday = .15
+remin_rate_perday = 0.1
+rho_bf = 1150.	! kg/m^3, Amaral-Zettler et al, 2021; van Ierland & Peperzak, 1984
+rho_pl = 930.
+grazing_method = 4
+kp = 2.
+K_NH4 = 2.
+K_NO3 = 2.
+Vp0 = 0.59
+PhyIS = 0.025
+$end
 
 $romsgrid
-	Ngrid=2              ! Refinement grids only!
+	Ngrid=1              ! Refinement grids only!
 	refine=7             ! grid refinement, Should be Ngrid-1 long
 $end
 
@@ -268,7 +302,7 @@ $output
 
   outpath = './'      ! Location to write output files  !CHANGE
                              ! Use outpath = './' to write in same folder as the executable	
-  NCOutFile = 'SHOWNESTING_NOMIX'     ! Name of the NetCDF output files (do not include .nc)
+  NCOutFile = 'biofouling'     ! Name of the NetCDF output files (do not include .nc)
 
   outpathGiven = .TRUE.      ! If TRUE files are written to the path given in outpath
 
@@ -295,10 +329,14 @@ $other
                              ! Note: Options 1-3 will output information to ErrorLog.txt
                              ! Note: This is only for particles that travel out of bounds illegally
   SaltTempOn   = .TRUE.      ! Calculate salinity and temperature at particle 
-  SaltTempMean = .TRUE.
-  WriteBottom  = .TRUE.
+  SaltTempMean = .TRUE.	    
+  LightOn      = .TRUE.	     
+  LightMean    = .FALSE.      
+  BiofoulOn      = .TRUE.	    
+  BiofoulMean    = .TRUE.              
+  WriteBottom  = .TRUE.      
   WriteWaterDepth  = .TRUE.
-	
+
  
   TempOffset   = 0.0         ! Temperature offset applied to growth                      !CHANGE
                              ! (Temp used for growth) = (ROMS output temp) + TempOffset
